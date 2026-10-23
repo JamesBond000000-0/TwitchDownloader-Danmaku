@@ -1,4 +1,4 @@
-using SkiaSharp;
+﻿using SkiaSharp;
 using System.Diagnostics;
 using System.Globalization;
 using TwitchDownloaderCore.Models.Render;
@@ -54,6 +54,7 @@ namespace TwitchDownloaderCore
             public required double Speed { get; init; } // px per second
             public required int LaneTop { get; init; } // in lane units
             public int LanesNeeded { get; init; } = 1;
+            public bool IsHighlighted { get; init; }
         }
 
         private readonly Dictionary<string, DanmakuTemplate> _danmakuTemplateCache = new();
@@ -72,6 +73,7 @@ namespace TwitchDownloaderCore
         };
 
         private SKPaint _danmakuBandPaint;
+        private SKPaint _danmakuHighlightPaint;
 
         // Shared setup with RenderAsyncImpl: fetch images, set fonts and the
         // cached metrics that GenerateCommentSection relies on.
@@ -231,6 +233,13 @@ namespace TwitchDownloaderCore
                     continue;
                 }
 
+                // Mirror the standard renderer's highlight check
+                // (GetMessageBackground): the highlight is drawn as a band
+                // behind the sprite in DrawDanmakuFrame.
+                bool isHighlighted = renderOptions.HighlightUsersArray.Length > 0
+                    && (renderOptions.HighlightUsersArray.Contains(comment.commenter.name, StringComparer.OrdinalIgnoreCase)
+                        || renderOptions.HighlightUsersArray.Contains(comment.commenter.display_name, StringComparer.OrdinalIgnoreCase));
+
                 var sprite = new DanmakuSprite
                 {
                     Template = template,
@@ -239,6 +248,7 @@ namespace TwitchDownloaderCore
                     Speed = speed,
                     LaneTop = laneTop,
                     LanesNeeded = lanesNeeded,
+                    IsHighlighted = isHighlighted,
                 };
                 for (int k = 0; k < lanesNeeded; k++)
                 {
@@ -299,6 +309,16 @@ namespace TwitchDownloaderCore
                 float x = (float)(canvasWidth - sprite.Speed * (timeSeconds - sprite.StartSeconds));
                 float y = sprite.LaneTop * lanePitch;
 
+                // Highlight band for users on the highlight list, drawn in
+                // the configured highlight color (the standard renderer
+                // paints the same color behind the whole comment row).
+                if (sprite.IsHighlighted && renderOptions.HighlightUserColor.Alpha > 0)
+                {
+                    _danmakuHighlightPaint ??= new SKPaint { IsAntialias = true, Color = renderOptions.HighlightUserColor };
+                    float hPad = (float)(renderOptions.FontSize * 0.35);
+                    canvas.DrawRoundRect(new SKRect(x - hPad, y, x + sprite.Template.Width + hPad, y + sprite.Template.Height), 8, 8, _danmakuHighlightPaint);
+                }
+
                 // Translucent backing band behind the comment text.
                 if (bandOpacity > 0)
                 {
@@ -346,6 +366,8 @@ namespace TwitchDownloaderCore
             _danmakuTemplateCache.Clear();
             _danmakuBandPaint?.Dispose();
             _danmakuBandPaint = null;
+            _danmakuHighlightPaint?.Dispose();
+            _danmakuHighlightPaint = null;
         }
 
         /// <summary>
@@ -400,8 +422,14 @@ namespace TwitchDownloaderCore
         /// </summary>
         public Task RenderDanmakuVideoAsync(double startSeconds, double lengthSeconds, int framerate, double scrollDurationSeconds, int canvasWidth, int canvasHeight, double offsetSeconds = 0, DanmakuSpeedMode speedMode = DanmakuSpeedMode.Uniform, int maxLanes = 0, CancellationToken cancellationToken = default)
         {
-            var outputInfo = renderOptions.FileCollisionCallback(new FileInfo(renderOptions.OutputFile));
+            var outputInfo = TwitchHelper.ClaimFile(renderOptions.OutputFile, renderOptions.FileCollisionCallback, _progress);
             renderOptions.OutputFile = outputInfo.FullName;
+            // Caller-provided ffmpeg arguments (the GUI's) carry no -y flag,
+            // so remove a previous render first, like RenderVideoAsync does.
+            if (outputInfo.Exists)
+            {
+                outputInfo.Delete();
+            }
 
             if (!string.IsNullOrWhiteSpace(renderOptions.InputArgs) && !string.IsNullOrWhiteSpace(renderOptions.OutputArgs))
             {
@@ -433,8 +461,14 @@ namespace TwitchDownloaderCore
         /// <param name="baseStartSeconds">Position in the base video that corresponds to <paramref name="startSeconds"/> in chat time.</param>
         public Task RenderDanmakuCompositeAsync(string baseVideoPath, double baseStartSeconds, double startSeconds, double lengthSeconds, int framerate, double scrollDurationSeconds, int canvasWidth, int canvasHeight, double offsetSeconds = 0, DanmakuSpeedMode speedMode = DanmakuSpeedMode.Uniform, int maxLanes = 0, CancellationToken cancellationToken = default)
         {
-            var outputInfo = renderOptions.FileCollisionCallback(new FileInfo(renderOptions.OutputFile));
+            var outputInfo = TwitchHelper.ClaimFile(renderOptions.OutputFile, renderOptions.FileCollisionCallback, _progress);
             renderOptions.OutputFile = outputInfo.FullName;
+            // Caller-provided ffmpeg arguments (the GUI's) carry no -y flag,
+            // so remove a previous render first, like RenderVideoAsync does.
+            if (outputInfo.Exists)
+            {
+                outputInfo.Delete();
+            }
 
             string ffmpegArgs = FormattableString.Invariant(
                 $"-y -ss {baseStartSeconds:F3} -i \"{baseVideoPath}\" -f rawvideo -pix_fmt bgra -s {canvasWidth}x{canvasHeight} -r {framerate} -i - -filter_complex \"[0:v][1:v]overlay=0:0:format=auto,format=yuv420p[v]\" -map \"[v]\" -map 0:a? -c:v libx264 -pix_fmt yuv420p -crf 18 -preset veryfast -movflags +faststart -c:a aac -b:a 160k -t {lengthSeconds:F3} \"{outputInfo.FullName}\"");
