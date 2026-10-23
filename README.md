@@ -99,6 +99,10 @@ Danmaku タブ下部の「Preview time (sec)」に時刻を入れて **Preview**
 不足分だけがキューに入ります。リストはテキストファイルで、保存先は設定画面や
 Queue Options で変更できます。形式は CLI の `massrender` の state ファイルと共通なので、
 同じファイルを指定すれば CLI と GUI で処理済みを共有できます。
+この重複回避は Mass Downloader からの一括投入だけでなく、**各ダウンロードページ
+（VOD / クリップ / チャット）や Chat Render ページからの単発投入でも効きます**
+（いずれも Queue Options を経由するため）。チャットが取得済みでレンダリングだけ
+必要な場合は、レンダリングだけがキューに入ります。
 
 ### GUI: 複数チャンネルとお気に入り (Mass Downloader)
 
