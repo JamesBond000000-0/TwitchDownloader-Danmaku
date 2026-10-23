@@ -128,6 +128,14 @@ TwitchDownloaderCLI danmakurender -i <vodid>_chat.json \
 - danmaku 動画は InputArgs/OutputArgs が設定されていれば GUI のコーデック
   選択を尊重する (GetFfmpegProcess 流用)。未設定 (CLI) 時は従来通り
   拡張子で決まる内蔵引数を使う
+- ユーザーリストの扱い (2026-10-23 検証・修正):
+  - Ignore Users / Banned Words は danmaku でも有効 (キュー経由含む)。
+    実測: 対象2ユーザーを指定すると配置件数が 202→196 に減少
+  - Highlight Users は当初 danmaku で無反応だった (標準レンダラはフレーム
+    合成時にハイライト色の帯を描くが、danmaku 合成側にその処理がなかった)。
+    スプライト背後に HighlightUserColor の帯を描くよう修正し実測確認済み
+  - ついでに修正: GUI のコーデック引数には -y が無いため、同名ファイルへの
+    再レンダリングで ffmpeg が詰まる問題。標準と同じく ClaimFile＋事前削除に統一
 - 未対応: danmaku 設定の永続化 (Settings への保存)。現状は起動ごとに既定値
 - 検証: WPF プロジェクトが `-p:EnableWindowsTargeting=true` でビルド成功
   (警告/エラー 0、XAML コンパイル含む)。Core の GUI 経路はハーネスで実走し
