@@ -1,0 +1,109 @@
+name: Danmaku Release
+
+# Builds the danmaku fork and publishes a GitHub Release.
+# Triggers:
+#   - pushing a tag like `danmaku-v0.1.0`
+#   - manual run (Actions tab) with a release tag input
+# Assets: Windows GUI (with ffmpeg bundled) and CLI for
+# Windows / Linux / LinuxArm64, following the upstream build.yml layout.
+
+on:
+  push:
+    tags:
+      - 'danmaku-v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag'
+        required: true
+        default: 'danmaku-v0.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-gui:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.release_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build Windows GUI
+        run: dotnet publish TwitchDownloaderWPF -p:PublishProfile=Windows -p:DebugType=Embedded
+      - name: Download FFmpeg To Workspace
+        uses: carlosperate/download-file-action@v2.0.3
+        with:
+          file-url: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+          file-name: ffmpeg.zip
+      - name: Bundle FFmpeg
+        run: tar xfz ffmpeg.zip --strip-components=1; copy bin/ffmpeg.exe TwitchDownloaderWPF/bin/Release/net10.0-windows/publish/win-x64/ffmpeg.exe
+      - name: Zip Windows GUI
+        uses: vimtor/action-zip@v1.3
+        with:
+          files: "TwitchDownloaderWPF/bin/Release/net10.0-windows/publish/win-x64"
+          dest: TwitchDownloaderGUI-${{ steps.tag.outputs.tag }}-Windows-x64.zip
+      - name: Publish Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: TwitchDownloaderGUI-${{ steps.tag.outputs.tag }}-Windows-x64.zip
+
+  build-cli:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.release_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build Windows CLI
+        run: dotnet publish TwitchDownloaderCLI -p:PublishProfile=Windows -p:DebugType=Embedded
+      - name: Build Linux CLI
+        run: dotnet publish TwitchDownloaderCLI -p:PublishProfile=Linux -p:DebugType=Embedded
+      - name: Build LinuxArm64 CLI
+        run: dotnet publish TwitchDownloaderCLI -p:PublishProfile=LinuxArm64 -p:DebugType=Embedded
+      - name: Zip Windows CLI
+        uses: vimtor/action-zip@v1.3
+        with:
+          files: "TwitchDownloaderCLI/bin/Release/net10.0/publish/Windows"
+          dest: TwitchDownloaderCLI-${{ steps.tag.outputs.tag }}-Windows-x64.zip
+      - name: Zip Linux CLI
+        uses: vimtor/action-zip@v1.3
+        with:
+          files: "TwitchDownloaderCLI/bin/Release/net10.0/publish/Linux"
+          dest: TwitchDownloaderCLI-${{ steps.tag.outputs.tag }}-Linux-x64.zip
+      - name: Zip LinuxArm64 CLI
+        uses: vimtor/action-zip@v1.3
+        with:
+          files: "TwitchDownloaderCLI/bin/Release/net10.0/publish/LinuxArm64"
+          dest: TwitchDownloaderCLI-${{ steps.tag.outputs.tag }}-LinuxArm64.zip
+      - name: Publish Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: |
+            TwitchDownloaderCLI-${{ steps.tag.outputs.tag }}-Windows-x64.zip
+            TwitchDownloaderCLI-${{ steps.tag.outputs.tag }}-Linux-x64.zip
+            TwitchDownloaderCLI-${{ steps.tag.outputs.tag }}-LinuxArm64.zip
