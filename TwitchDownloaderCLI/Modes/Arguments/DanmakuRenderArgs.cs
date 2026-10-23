@@ -1,4 +1,4 @@
-using CommandLine;
+﻿using CommandLine;
 using TwitchDownloaderCLI.Models;
 
 namespace TwitchDownloaderCLI.Modes.Arguments
@@ -89,6 +89,18 @@ namespace TwitchDownloaderCLI.Modes.Arguments
 
         [Option("badges", Default = false, HelpText = "Enable chat badges.")]
         public bool? ChatBadges { get; set; }
+
+        [Option("highlight-users", Default = "", HelpText = "Comma-separated list of users whose comments get a highlight band. Not case-sensitive.")]
+        public string HighlightUsers { get; set; }
+
+        [Option("highlight-badges", Default = "", HelpText = "Comma-separated list of badge ids (e.g. vip,moderator,broadcaster) whose comments get a highlight band. Not case-sensitive.")]
+        public string HighlightBadges { get; set; }
+
+        [Option("highlight-user-color", Default = "#C8FF0059", HelpText = "Highlight band color in the format '#RRGGBB' or '#AARRGGBB'. Applies to both --highlight-users and --highlight-badges.")]
+        public string HighlightUserColor { get; set; }
+
+        [Option("highlight-badge-color", Default = "", HelpText = "Separate highlight band color for --highlight-badges matches, in the format '#RRGGBB' or '#AARRGGBB'. Empty = use --highlight-user-color.")]
+        public string HighlightBadgeColor { get; set; }
 
         [Option("offline", Default = false, HelpText = "Render completely offline using only embedded emotes, badges, and bits from the input json.")]
         public bool Offline { get; set; }

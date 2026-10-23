@@ -1,4 +1,4 @@
-using SkiaSharp;
+﻿using SkiaSharp;
 using TwitchDownloaderCLI.Modes.Arguments;
 using TwitchDownloaderCLI.Tools;
 using TwitchDownloaderCore;
@@ -25,7 +25,7 @@ namespace TwitchDownloaderCLI.Modes
                 OutputFile = inputOptions.OutputFile,
                 BackgroundColor = SKColor.Parse(inputOptions.BackgroundColor),
                 AlternateBackgroundColor = SKColor.Parse("#191919"),
-                HighlightUserColor = SKColor.Parse("#C8FF0059"),
+                HighlightUserColor = SKColor.Parse(inputOptions.HighlightUserColor),
                 MessageColor = SKColor.Parse("#ffffff"),
                 ChatWidth = SpriteMeasureWidth,
                 ChatHeight = inputOptions.Height,
@@ -54,6 +54,9 @@ namespace TwitchDownloaderCLI.Modes
                 },
                 AdjustUsernameVisibility = true,
                 HideUsername = !(bool)inputOptions.ShowName!,
+                HighlightUsersArray = string.IsNullOrWhiteSpace(inputOptions.HighlightUsers) ? [] : inputOptions.HighlightUsers.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+                HighlightBadgesArray = string.IsNullOrWhiteSpace(inputOptions.HighlightBadges) ? [] : inputOptions.HighlightBadges.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+                HighlightBadgeColor = string.IsNullOrWhiteSpace(inputOptions.HighlightBadgeColor) ? SKColor.Empty : SKColor.Parse(inputOptions.HighlightBadgeColor),
                 DanmakuShadow = inputOptions.Shadow,
                 DanmakuBandOpacity = inputOptions.BandOpacity,
                 Outline = inputOptions.Outline,

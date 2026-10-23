@@ -53,6 +53,8 @@ namespace TwitchDownloaderCore.Options
         public bool SubMessages { get; set; }
         public bool ChatBadges { get; set; }
         public string[] HighlightUsersArray { get; set; } = [];
+        public string[] HighlightBadgesArray { get; set; } = [];
+        public SKColor HighlightBadgeColor { get; set; } = SKColor.Empty;
         public string[] IgnoreUsersArray { get; set; } = [];
         public string[] BannedWordsArray { get; set; } = [];
         public double EmoteScale { get; set; } = 1.0;

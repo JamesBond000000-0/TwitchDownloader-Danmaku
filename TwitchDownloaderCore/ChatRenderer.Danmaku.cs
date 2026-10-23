@@ -55,6 +55,7 @@ namespace TwitchDownloaderCore
             public required int LaneTop { get; init; } // in lane units
             public int LanesNeeded { get; init; } = 1;
             public bool IsHighlighted { get; init; }
+            public bool IsBadgeHighlight { get; init; }
         }
 
         private readonly Dictionary<string, DanmakuTemplate> _danmakuTemplateCache = new();
@@ -74,6 +75,7 @@ namespace TwitchDownloaderCore
 
         private SKPaint _danmakuBandPaint;
         private SKPaint _danmakuHighlightPaint;
+        private SKPaint _danmakuBadgeHighlightPaint;
 
         // Shared setup with RenderAsyncImpl: fetch images, set fonts and the
         // cached metrics that GenerateCommentSection relies on.
@@ -236,9 +238,13 @@ namespace TwitchDownloaderCore
                 // Mirror the standard renderer's highlight check
                 // (GetMessageBackground): the highlight is drawn as a band
                 // behind the sprite in DrawDanmakuFrame.
-                bool isHighlighted = renderOptions.HighlightUsersArray.Length > 0
+                bool userHit = renderOptions.HighlightUsersArray.Length > 0
                     && (renderOptions.HighlightUsersArray.Contains(comment.commenter.name, StringComparer.OrdinalIgnoreCase)
                         || renderOptions.HighlightUsersArray.Contains(comment.commenter.display_name, StringComparer.OrdinalIgnoreCase));
+                bool badgeHit = renderOptions.HighlightBadgesArray.Length > 0
+                    && comment.message.user_badges is { Count: > 0 }
+                    && comment.message.user_badges.Any(b => renderOptions.HighlightBadgesArray.Contains(b._id, StringComparer.OrdinalIgnoreCase));
+                bool isHighlighted = userHit || badgeHit;
 
                 var sprite = new DanmakuSprite
                 {
@@ -249,6 +255,7 @@ namespace TwitchDownloaderCore
                     LaneTop = laneTop,
                     LanesNeeded = lanesNeeded,
                     IsHighlighted = isHighlighted,
+                    IsBadgeHighlight = badgeHit && !userHit,
                 };
                 for (int k = 0; k < lanesNeeded; k++)
                 {
@@ -312,11 +319,16 @@ namespace TwitchDownloaderCore
                 // Highlight band for users on the highlight list, drawn in
                 // the configured highlight color (the standard renderer
                 // paints the same color behind the whole comment row).
-                if (sprite.IsHighlighted && renderOptions.HighlightUserColor.Alpha > 0)
+                if (sprite.IsHighlighted)
                 {
                     _danmakuHighlightPaint ??= new SKPaint { IsAntialias = true, Color = renderOptions.HighlightUserColor };
-                    float hPad = (float)(renderOptions.FontSize * 0.35);
-                    canvas.DrawRoundRect(new SKRect(x - hPad, y, x + sprite.Template.Width + hPad, y + sprite.Template.Height), 8, 8, _danmakuHighlightPaint);
+                    _danmakuBadgeHighlightPaint ??= new SKPaint { IsAntialias = true, Color = renderOptions.HighlightBadgeColor != SKColor.Empty ? renderOptions.HighlightBadgeColor : renderOptions.HighlightUserColor };
+                    var highlightPaint = sprite.IsBadgeHighlight ? _danmakuBadgeHighlightPaint : _danmakuHighlightPaint;
+                    if (highlightPaint.Color.Alpha > 0)
+                    {
+                        float hPad = (float)(renderOptions.FontSize * 0.35);
+                        canvas.DrawRoundRect(new SKRect(x - hPad, y, x + sprite.Template.Width + hPad, y + sprite.Template.Height), 8, 8, highlightPaint);
+                    }
                 }
 
                 // Translucent backing band behind the comment text.

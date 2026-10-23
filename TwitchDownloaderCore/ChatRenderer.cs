@@ -807,20 +807,27 @@ namespace TwitchDownloaderCore
         private SKColor GetMessageBackground(int commentIndex, [AllowNull] out SKPaint paint)
         {
             var commenter = chatRoot.comments[commentIndex].commenter;
-            var isHighlighted = renderOptions.HighlightUsersArray.Length > 0
+            var userHit = renderOptions.HighlightUsersArray.Length > 0
                                 && (renderOptions.HighlightUsersArray.Contains(commenter.name, StringComparer.OrdinalIgnoreCase)
                                     || renderOptions.HighlightUsersArray.Contains(commenter.display_name, StringComparer.OrdinalIgnoreCase));
+            var badgeHit = renderOptions.HighlightBadgesArray.Length > 0
+                                && chatRoot.comments[commentIndex].message.user_badges is { Count: > 0 } badges
+                                && badges.Any(b => renderOptions.HighlightBadgesArray.Contains(b._id, StringComparer.OrdinalIgnoreCase));
+            var isHighlighted = userHit || badgeHit;
+            var highlightColor = badgeHit && !userHit && renderOptions.HighlightBadgeColor != SKColor.Empty
+                                ? renderOptions.HighlightBadgeColor
+                                : renderOptions.HighlightUserColor;
 
             if (isHighlighted)
             {
-                if (renderOptions.AlternateMessageBackgrounds && commentIndex % 2 == 1)
+                if (renderOptions.AlternateMessageBackgrounds && commentIndex % 2 == 1 && highlightColor == renderOptions.HighlightUserColor)
                 {
                     paint = renderOptions.AlternateBackgroundHighlightUserPaint;
                     return paint.Color;
                 }
 
-                paint = GetCachedPaint(renderOptions.HighlightUserColor);
-                return renderOptions.HighlightUserColor;
+                paint = GetCachedPaint(highlightColor);
+                return highlightColor;
             }
 
             if (renderOptions.AlternateMessageBackgrounds && commentIndex % 2 == 1)
