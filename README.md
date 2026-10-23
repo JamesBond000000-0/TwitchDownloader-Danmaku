@@ -54,12 +54,28 @@ Danmaku タブの項目:
 | Speed mode | Uniform = 全コメント同速 / Fixed duration = 表示時間一定（長いコメントほど速い、ニコニコ式） | Uniform |
 | Max lanes (0 = no limit) | 流すレーン数の上限。混雑時の間引き | 0 |
 | Band opacity (0 = off) | 文字の背後に敷く半透明の帯（明るい映像での視認性向上） | 0 |
+| Highlight badges | ハイライトするバッジ ID（カンマ区切り。例: vip,moderator,broadcaster,verified,partner） | 空 |
+| Badge color | バッジ用ハイライト色。「Separate」にチェックした時だけ有効（未指定時は Highlight Users の色） | オフ |
 | Drop shadow | 文字に影を付ける | オフ |
 | Hide usernames | ユーザー名を出さない | オフ |
 
 キャンバスサイズ・フォント・背景色・出力形式 / コーデックは既存タブの設定がそのまま使われます。
 Ignore Users / 禁止ワードは danmaku でも有効で、Highlight Users はコメントの背後に
 ハイライト色の帯として表示されます。danmaku 設定は現状では保存されず、起動ごとに既定値に戻ります。
+
+ハイライトはユーザー名だけでなく**バッジでも指定できます**（VIP やモデレーター、
+認証済みユーザーなど）。バッジ持ちのコメントにも帯が付き、バッジ専用の色を分けることも
+できます。両方に一致した場合はユーザー名指定の色が優先されます。なお Twitch の認証済みは
+アーカイブのデータ形式によって `verified` と `partner` のどちらで入っていることもあるので、
+確実に拾いたい場合は両方指定してください。
+
+### GUI: プレビューで見ながら調整
+
+Danmaku タブ下部の「Preview time (sec)」に時刻を入れて **Preview** ボタンを押すと、
+現在の設定でその時刻の 1 フレームを描いたプレビューウィンドウが開きます。
+プレビューを開いたままメインウィンドウで設定（速さ・レーン数・影/帯/輪郭・ハイライト等）を
+変えて、プレビュー側の **Update** ボタンを押せば、その時点の設定で再描画されます。
+本番レンダリングの前に見た目を確認・調整できます。
 
 ### GUI: Mass Downloader で一括 danmaku 化
 
@@ -111,6 +127,9 @@ TwitchDownloaderCLI danmakurender -i chat.json -o frame.png --time 1800
 主なオプション: `--duration`（横断秒数）、`--speed-mode uniform|fixed`、`--max-lanes`、
 `--shadow` / `--band <0..1>` / `--outline`（視認性対策）、`--show-name`（名前表示）、
 `--offset`（時刻シフト）、`-w` / `-h` / `--font-size`、`--collision`。
+ハイライト: `--highlight-users <名前,名前>`、`--highlight-badges <バッジID,バッジID>`、
+`--highlight-user-color <#AARRGGBB>`、`--highlight-badge-color <#AARRGGBB>`
+（バッジ用を省略するとユーザー用の色。書式は `#RRGGBB` でも可）。
 混みすぎてレーンに入らなかったコメントは間引かれ、件数がログに表示されます。
 
 ### CLI 一括処理 (massrender、`mass-cli` ブランチ)
