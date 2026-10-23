@@ -37,6 +37,7 @@ side branches:
 | --- | --- | --- |
 | [`danmaku`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/danmaku/README.md) | ニコニコ式に流れるコメント (danmaku) レンダリング（GUI + CLI）。配布は `danmaku-v*` タグの Releases | v0.1.0 リリース済み |
 | [`mass-cli`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/mass-cli/README.md) | `danmaku` に加え、CLI 一括処理 `massrender`（指定ユーザーの動画取得 → チャットDL → danmaku 描画、成功 ID の記録による重複回避つき） | 開発中 |
+| [`danmaku-mass`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/danmaku-mass/README.md) | `danmaku` と `mass-cli` を合体した統合ブランチ（両方の機能を含む） | 開発中 |
 
 機能の説明・使い方は各ブランチの README を参照してください。
 
