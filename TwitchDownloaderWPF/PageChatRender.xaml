@@ -237,6 +237,34 @@
                     </TextBlock>
                 </StackPanel>
             </TabItem>
+            <TabItem Header="Danmaku" Background="{DynamicResource AppBackground}" Foreground="{DynamicResource AppText}">
+                <StackPanel>
+                    <Separator Margin="0" />
+                    <CheckBox x:Name="checkDanmaku" Content="Render as danmaku (flowing comments, niconico style)" Margin="5,10,5,0" BorderBrush="{DynamicResource AppElementBorder}"/>
+                    <DockPanel Background="{DynamicResource AppBackground}">
+                        <StackPanel Orientation="Vertical" Margin="5,10,5,5">
+                            <TextBlock Text="Scroll duration (sec)" HorizontalAlignment="Right" Margin="0,5,0,0" Foreground="{DynamicResource AppText}"/>
+                            <TextBlock Text="Speed mode" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
+                            <TextBlock Text="Max lanes (0 = all)" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
+                            <TextBlock Text="Band opacity (0-1)" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Margin="0,10,0,5">
+                            <TextBox x:Name="textDanmakuDuration" Text="6" Width="75" HorizontalAlignment="Left" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
+                            <ComboBox x:Name="comboDanmakuSpeedMode" Width="180" HorizontalAlignment="Left" Margin="0,12,0,0" SelectedIndex="0">
+                                <ComboBoxItem Content="Uniform speed"/>
+                                <ComboBoxItem Content="Fixed display time"/>
+                            </ComboBox>
+                            <TextBox x:Name="textDanmakuMaxLanes" Text="0" Width="75" HorizontalAlignment="Left" Margin="0,12,0,0" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
+                            <TextBox x:Name="textDanmakuBand" Text="0" Width="75" HorizontalAlignment="Left" Margin="0,12,0,0" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" Margin="15,10,5,5">
+                            <CheckBox x:Name="checkDanmakuShadow" Content="Text shadow" Margin="0,4,0,0" BorderBrush="{DynamicResource AppElementBorder}"/>
+                            <CheckBox x:Name="checkDanmakuHideName" Content="Hide usernames" Margin="0,16,0,0" BorderBrush="{DynamicResource AppElementBorder}"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock Text="Canvas size, font, background color, output format and codec are taken from the other tabs. Partial render (range selection) also applies to danmaku renders." Margin="5,2,5,0" Foreground="{DynamicResource AppInnerText}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </TabItem>
             <TabItem Visibility="Hidden" Header="{lex:Loc RenderTabPreview}">
             </TabItem>
         </TabControl>

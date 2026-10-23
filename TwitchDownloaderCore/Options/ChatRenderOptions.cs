@@ -89,5 +89,12 @@ namespace TwitchDownloaderCore.Options
         public bool AdjustUsernameVisibility { get; set; }
         public Func<FileInfo, FileInfo> FileCollisionCallback { get; set; } = info => info;
         public bool RenderUserAvatars { get; set; } = false;
+        public bool HideUsername { get; set; } = false;
+        public bool DanmakuMode { get; set; } = false;
+        public double DanmakuScrollDuration { get; set; } = 6;
+        public DanmakuSpeedMode DanmakuSpeedMode { get; set; } = DanmakuSpeedMode.Uniform;
+        public int DanmakuMaxLanes { get; set; } = 0;
+        public bool DanmakuShadow { get; set; } = false;
+        public double DanmakuBandOpacity { get; set; } = 0.0;
     }
 }

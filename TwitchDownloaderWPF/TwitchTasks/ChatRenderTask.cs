@@ -60,7 +60,14 @@ namespace TwitchDownloaderWPF.TwitchTasks
             try
             {
                 await renderer.ParseJsonAsync(TokenSource.Token);
-                await renderer.RenderVideoAsync(TokenSource.Token);
+                if (DownloadOptions.DanmakuMode)
+                {
+                    await renderer.RenderDanmakuFromOptionsAsync(TokenSource.Token);
+                }
+                else
+                {
+                    await renderer.RenderVideoAsync(TokenSource.Token);
+                }
                 if (TokenSource.IsCancellationRequested)
                 {
                     ChangeStatus(TwitchTaskStatus.Canceled);

@@ -143,6 +143,13 @@ namespace TwitchDownloaderWPF
                 AllowUnlistedEmotes = true,
                 DisperseCommentOffsets = checkDispersion.IsChecked.GetValueOrDefault(),
                 AdjustUsernameVisibility = checkAdjustUsernameVisibility.IsChecked.GetValueOrDefault(),
+                DanmakuMode = checkDanmaku.IsChecked.GetValueOrDefault(),
+                DanmakuScrollDuration = double.Parse(textDanmakuDuration.Text, CultureInfo.CurrentCulture),
+                DanmakuSpeedMode = comboDanmakuSpeedMode.SelectedIndex == 1 ? DanmakuSpeedMode.FixedDuration : DanmakuSpeedMode.Uniform,
+                DanmakuMaxLanes = int.Parse(textDanmakuMaxLanes.Text),
+                DanmakuShadow = checkDanmakuShadow.IsChecked.GetValueOrDefault(),
+                DanmakuBandOpacity = double.Parse(textDanmakuBand.Text, CultureInfo.CurrentCulture),
+                HideUsername = checkDanmaku.IsChecked.GetValueOrDefault() && checkDanmakuHideName.IsChecked.GetValueOrDefault(),
             };
             if (RadioEmojiNotoColor.IsChecked == true)
                 options.EmojiVendor = EmojiVendor.GoogleNotoColor;
@@ -393,6 +400,12 @@ namespace TwitchDownloaderWPF
                 _ = double.Parse(textAccentStrokeScale.Text, CultureInfo.CurrentCulture);
                 _ = double.Parse(textAccentIndentScale.Text, CultureInfo.CurrentCulture);
                 _ = double.Parse(textOutlineScale.Text, CultureInfo.CurrentCulture);
+                if (checkDanmaku.IsChecked == true)
+                {
+                    _ = double.Parse(textDanmakuDuration.Text, CultureInfo.CurrentCulture);
+                    _ = int.Parse(textDanmakuMaxLanes.Text);
+                    _ = double.Parse(textDanmakuBand.Text, CultureInfo.CurrentCulture);
+                }
             }
             catch (Exception ex)
             {
@@ -686,7 +699,14 @@ namespace TwitchDownloaderWPF
                 UpdateActionButtons(true);
                 try
                 {
-                    await currentRender.RenderVideoAsync(_cancellationTokenSource.Token);
+                    if (options.DanmakuMode)
+                    {
+                        await currentRender.RenderDanmakuFromOptionsAsync(_cancellationTokenSource.Token);
+                    }
+                    else
+                    {
+                        await currentRender.RenderVideoAsync(_cancellationTokenSource.Token);
+                    }
                     renderProgress.SetStatus(Translations.Strings.StatusDone);
                     SetImage("Images/ppHop.gif", true);
                 }

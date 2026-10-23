@@ -1734,6 +1734,11 @@ namespace TwitchDownloaderCore
 
         private void DrawUsername(Comment comment, List<SectionImage> sectionImages, ref Point drawPos, Point defaultPos, bool appendColon = true, SKColor? colorOverride = null, int commentIndex = 0)
         {
+            if (renderOptions.HideUsername)
+            {
+                return;
+            }
+
             var userColor = colorOverride ?? (comment.message.user_color is not null
                 ? SKColor.Parse(comment.message.user_color)
                 : DefaultUsernameColors[Math.Abs(comment.commenter.display_name.GetHashCode()) % DefaultUsernameColors.Length]);
