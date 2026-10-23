@@ -79,6 +79,27 @@ TwitchDownloaderCLI danmakurender -i chat.json -o frame.png --time 1800
 `--offset`（時刻シフト）、`-w` / `-h` / `--font-size`、`--collision`。
 混みすぎてレーンに入らなかったコメントは間引かれ、件数がログに表示されます。
 
+### CLI 一括処理 (massrender、`mass-cli` ブランチ)
+
+指定ユーザーの動画をまとめて「チャット取得 → danmaku レンダリング」する CLI 機能です
+（この機能は `mass-cli` ブランチにあります）。
+
+```bash
+# 新しいものを最大5本まで処理
+TwitchDownloaderCLI massrender -u mrtenzouez -o ./out
+
+# 対象の確認だけ（ダウンロード・レンダリングしない）
+TwitchDownloaderCLI massrender -u mrtenzouez -o ./out --dry-run --limit 10
+```
+
+- 出力は `<output>/<動画ID>/` ごとにチャット JSON と `<動画ID>_danmaku.mp4`
+- **重複回避**: 成功した動画 ID を state ファイル（既定は `<output>/mass-state.txt`、
+  1行1件のテキスト）に記録し、次回以降はスキップします。失敗した動画は記録されず、
+  次回リトライされます
+- `--type ARCHIVE|HIGHLIGHT|UPLOAD` で動画種別の絞り込み、`--limit` で1回の処理本数を指定
+
+詳細は [docs/mass-render.md](docs/mass-render.md) を参照してください。
+
 詳細な設計メモは [docs/danmaku-design.md](docs/danmaku-design.md) を参照してください。
 
 ---
