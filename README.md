@@ -81,6 +81,16 @@ TwitchDownloaderCLI danmakurender -i chat.json -o frame.png --time 1800
 
 詳細な設計メモは [docs/danmaku-design.md](docs/danmaku-design.md) を参照してください。
 
+### クレジット (Credits)
+
+- **ニコニコ動画**（株式会社ドワンゴ）— 画面を右から左へ流れるコメント「弾幕 (danmaku)」の
+  発祥であり、本機能の様式の参考元です
+- **[lay295/TwitchDownloader](https://github.com/lay295/TwitchDownloader)** — 本フォークの
+  ベースソフトウェア。danmaku の描画はその ChatRenderer の仕組み（エモート・バッジ・
+  名前色などの処理）を土台に実装しています
+- **Saccubus** — ニコニコのコメントを動画へ描画する先行ツール。本フォークの着想の
+  出発点になりました
+
 ---
 
 ## What Can It Do?
