@@ -61,6 +61,25 @@ Danmaku タブの項目:
 Ignore Users / 禁止ワードは danmaku でも有効で、Highlight Users はコメントの背後に
 ハイライト色の帯として表示されます。danmaku 設定は現状では保存されず、起動ごとに既定値に戻ります。
 
+### GUI: Mass Downloader で一括 danmaku 化
+
+チャンネルの動画をまとめて danmaku 化する場合は Mass Downloader 経由でもできます:
+
+1. **先に** Chat Render ページで Danmaku タブの「Render as danmaku」にチェックし、
+   キャンバスサイズや流れる速さなどを設定しておく（キュー投入時に、その時点の
+   Render ページの設定がそのまま取り込まれるため）
+2. Mass Downloader を開き、チャンネルのログイン名を入力して「Set Channel」
+   （表示名や URL ではなくログイン名。失敗してもエラーは出ないので注意）
+3. 一覧から処理したい動画をクリックして選択し、「Queue」ボタンを押す
+4. Queue Options で「Download Chat」（形式は JSON）と「Render Chat」にチェックし、
+   保存先フォルダを指定して OK
+5. チャットのダウンロードが終わると、続けて danmaku レンダリングが自動で実行される。
+   出力はチャット JSON と同じフォルダに、同名で拡張子が .mp4 のファイル
+
+注意: この経路には重複回避がありません。同じ動画を再度投入すると再レンダリングされます
+（同名ファイルがある場合は競合ダイアログで確認されます）。処理済み ID の記録による
+重複回避つきの一括処理は、CLI の `massrender`（`mass-cli` ブランチ）を使ってください。
+
 ### CLI での使い方
 
 ```bash
