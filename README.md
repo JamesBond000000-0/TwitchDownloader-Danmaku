@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
   <a href="https://github.com/lay295/TwitchDownloader">
     <img src="TwitchDownloaderWPF/Images/Logo.png" alt="Logo" width="80" height="80">
   </a>
@@ -23,6 +23,24 @@ This document is also available in:
 - [**Simplified Chinese / 简体中文**](README_zh-cn.md)
 - [**Traditonal Chinese / 繁體中文**](README_zh-tw.md)
 - [**French / Français**](README_fr.md)
+
+## About This Fork （このフォークについて）
+
+This repository is a fork of [lay295/TwitchDownloader](https://github.com/lay295/TwitchDownloader).
+The `master` branch is kept identical to upstream; all added features are developed on
+side branches:
+
+本家 [lay295/TwitchDownloader](https://github.com/lay295/TwitchDownloader) のフォークです。
+`master` は本家そのままで、追加機能は以下のブランチで開発しています。
+
+| ブランチ | 内容 | 状況 |
+| --- | --- | --- |
+| [`danmaku`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/danmaku/README.md) | ニコニコ式に流れるコメント (danmaku) レンダリング（GUI + CLI）。配布は `danmaku-v*` タグの Releases | v0.1.0 リリース済み |
+| [`mass-cli`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/mass-cli/README.md) | `danmaku` に加え、CLI 一括処理 `massrender`（指定ユーザーの動画取得 → チャットDL → danmaku 描画、成功 ID の記録による重複回避つき） | 開発中 |
+
+機能の説明・使い方は各ブランチの README を参照してください。
+
+---
 
 ## What Can It Do?
 
