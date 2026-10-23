@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
   <a href="https://github.com/lay295/TwitchDownloader">
     <img src="TwitchDownloaderWPF/Images/Logo.png" alt="Logo" width="80" height="80">
   </a>
@@ -23,6 +23,65 @@ This document is also available in:
 - [**Simplified Chinese / 简体中文**](README_zh-cn.md)
 - [**Traditonal Chinese / 繁體中文**](README_zh-tw.md)
 - [**French / Français**](README_fr.md)
+
+## Danmaku Fork （このフォークについて）
+
+This fork of TwitchDownloader adds **NicoNico-style flowing chat (danmaku) rendering**: instead of the
+usual scrolling chat log, chat messages flow across the video from right to left.
+通常のチャットレンダリングに加え、ニコニコ動画のようにコメントが右から左へ流れる
+「弾幕」レンダリングを追加したフォークです。名前色・エモート（BTTV / FFZ / 7TV、動画エモート含む）・
+バッジ・カラー絵文字に対応し、重ならないようレーン割り当てを行います。
+
+![Danmaku render example](docs/images/danmaku-example.png)
+
+### ダウンロード
+
+[`danmaku-v*` の Releases](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/releases) から
+取得できます（GUI Windows 版〈ffmpeg 同梱〉、CLI Windows / Linux / Linux Arm64 版）。
+ソースから使う場合は `danmaku` ブランチをチェックアウトしてください。
+
+### GUI での使い方
+
+1. Chat Render ページを開き、チャット JSON を読み込む
+2. **Danmaku** タブで「Render as danmaku」にチェック
+3. Render ボタン、または Task Queue 経由で実行（キューの Render Chat でも danmaku になります）
+
+Danmaku タブの項目:
+
+| 項目 | 説明 | 既定値 |
+| --- | --- | --- |
+| Scroll duration (sec) | 画面を横断する時間。速さの調整 | 6 |
+| Speed mode | Uniform = 全コメント同速 / Fixed duration = 表示時間一定（長いコメントほど速い、ニコニコ式） | Uniform |
+| Max lanes (0 = no limit) | 流すレーン数の上限。混雑時の間引き | 0 |
+| Band opacity (0 = off) | 文字の背後に敷く半透明の帯（明るい映像での視認性向上） | 0 |
+| Drop shadow | 文字に影を付ける | オフ |
+| Hide usernames | ユーザー名を出さない | オフ |
+
+キャンバスサイズ・フォント・背景色・出力形式 / コーデックは既存タブの設定がそのまま使われます。
+Ignore Users / 禁止ワードは danmaku でも有効で、Highlight Users はコメントの背後に
+ハイライト色の帯として表示されます。danmaku 設定は現状では保存されず、起動ごとに既定値に戻ります。
+
+### CLI での使い方
+
+```bash
+# チャット JSON から流れるコメント動画を生成
+TwitchDownloaderCLI danmakurender -i chat.json -o out.mp4 --video --start 1740 --length 120
+
+# 元動画に直接合成（単一パス）
+TwitchDownloaderCLI danmakurender -i chat.json -o out.mp4 --video --base-video vod.mp4 --base-start 1740 --length 60
+
+# 1 フレームだけ PNG で確認
+TwitchDownloaderCLI danmakurender -i chat.json -o frame.png --time 1800
+```
+
+主なオプション: `--duration`（横断秒数）、`--speed-mode uniform|fixed`、`--max-lanes`、
+`--shadow` / `--band <0..1>` / `--outline`（視認性対策）、`--show-name`（名前表示）、
+`--offset`（時刻シフト）、`-w` / `-h` / `--font-size`、`--collision`。
+混みすぎてレーンに入らなかったコメントは間引かれ、件数がログに表示されます。
+
+詳細な設計メモは [docs/danmaku-design.md](docs/danmaku-design.md) を参照してください。
+
+---
 
 ## What Can It Do?
 
