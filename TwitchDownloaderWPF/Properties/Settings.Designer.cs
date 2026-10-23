@@ -693,6 +693,30 @@ namespace TwitchDownloaderWPF.Properties {
                 this["VerboseErrors"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool DedupEnabled {
+            get {
+                return ((bool)(this["DedupEnabled"]));
+            }
+            set {
+                this["DedupEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DedupListPath {
+            get {
+                return ((string)(this["DedupListPath"]));
+            }
+            set {
+                this["DedupListPath"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

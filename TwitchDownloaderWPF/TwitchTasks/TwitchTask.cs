@@ -1,8 +1,9 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using TwitchDownloaderCore.Extensions;
 using TwitchDownloaderCore.Interfaces;
+using TwitchDownloaderCore.Tools;
 using TwitchDownloaderWPF.Properties;
 using TwitchDownloaderWPF.Services;
 using TwitchDownloaderWPF.Utils;
@@ -40,6 +41,15 @@ namespace TwitchDownloaderWPF.TwitchTasks
 
         protected CancellationTokenSource TokenSource { get; set; } = new();
         public TwitchTask DependantTask { get; init; }
+
+        /// <summary>
+        /// When set (by the Mass Downloader queue flow), this video/clip ID is
+        /// appended to the dedup list if this task finishes successfully.
+        /// Only the last task of a per-video chain carries these values.
+        /// </summary>
+        public string DedupVideoId { get; set; }
+        public string DedupTitle { get; set; }
+        public string DedupListPath { get; set; }
         public abstract string TaskType { get; }
 
         public Exception Exception
@@ -80,6 +90,18 @@ namespace TwitchDownloaderWPF.TwitchTasks
 
         public void ChangeStatus(TwitchTaskStatus newStatus)
         {
+            if (newStatus is TwitchTaskStatus.Finished && DedupVideoId is not null)
+            {
+                try
+                {
+                    DedupList.Append(DedupListPath ?? DedupSettings.GetEffectivePath(), DedupVideoId, DedupTitle);
+                }
+                catch
+                {
+                    // Recording to the dedup list must never break the queue.
+                }
+            }
+
             Status = newStatus;
             DisplayStatus = newStatus.ToString();
 

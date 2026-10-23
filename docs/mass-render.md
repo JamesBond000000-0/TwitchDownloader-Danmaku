@@ -1,4 +1,4 @@
-# CLI massrender — ユーザーの動画を一括で取得して danmaku レンダリング
+﻿# CLI massrender — ユーザーの動画を一括で取得して danmaku レンダリング
 
 `massrender` は CLI verb。指定した Twitch ユーザーの動画一覧を取得し、各動画について
 「チャット JSON のダウンロード → danmaku レンダリング」を自動で繰り返す。
@@ -54,6 +54,13 @@ TwitchDownloaderCLI massrender -u mrtenzouez -o ./out --type ARCHIVE --speed-mod
 | `--duration` / `--speed-mode` / `--max-lanes` | 6 / uniform / 0 | danmakurender と同じ意味 |
 | `-w` / `-h` / `--font-size` / `--fps` | 1920 / 1080 / 36 / 30 | 描画パラメータ |
 | `--shadow` / `--band` / `--show-name` | off / 0 / on | danmakurender と同じ意味 |
+
+## GUI との共有 (danmaku-mass ブランチ)
+
+重複回避リストの形式は GUI の Mass Downloader 経路と共通化されている
+（実装は `TwitchDownloaderCore/Tools/DedupList.cs`）。
+GUI 側の設定で同じファイルを指定すれば、CLI で処理した動画を GUI がスキップし、
+その逆も効く。GUI 側は「その動画の最後のタスクが成功した時点」で記録する。
 
 ## 挙動メモ
 

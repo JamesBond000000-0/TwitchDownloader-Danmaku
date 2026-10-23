@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,10 +7,12 @@ using System.Windows.Media;
 using TwitchDownloaderCore;
 using TwitchDownloaderCore.Models;
 using TwitchDownloaderCore.Options;
+using TwitchDownloaderCore.Tools;
 using TwitchDownloaderCore.Services;
 using TwitchDownloaderWPF.Properties;
 using TwitchDownloaderWPF.Services;
 using TwitchDownloaderWPF.TwitchTasks;
+using TwitchDownloaderWPF.Utils;
 
 namespace TwitchDownloaderWPF
 {
@@ -29,6 +32,8 @@ namespace TwitchDownloaderWPF
             InitializeComponent();
 
             textFolder.Text = Settings.Default.QueueFolder;
+            checkDedup.IsChecked = Settings.Default.DedupEnabled;
+            textDedupPath.Text = DedupSettings.GetEffectivePath();
 
             TextPreferredQuality.Visibility = Visibility.Collapsed;
             ComboPreferredQuality.Visibility = Visibility.Collapsed;
@@ -113,6 +118,8 @@ namespace TwitchDownloaderWPF
             InitializeComponent();
 
             textFolder.Text = Settings.Default.QueueFolder;
+            checkDedup.IsChecked = Settings.Default.DedupEnabled;
+            textDedupPath.Text = DedupSettings.GetEffectivePath();
 
             if (_dataList.Any(x => x.Id.All(char.IsDigit)))
             {
@@ -141,6 +148,9 @@ namespace TwitchDownloaderWPF
 
         private void btnQueue_Click(object sender, RoutedEventArgs e)
         {
+            Settings.Default.DedupEnabled = checkDedup.IsChecked.GetValueOrDefault();
+            Settings.Default.DedupListPath = textDedupPath.Text.Trim();
+
             if (_parentPage != null)
             {
                 if (_parentPage is PageVodDownload vodDownloadPage)
@@ -593,8 +603,19 @@ namespace TwitchDownloaderWPF
                 }
             }
 
+            var dedupEnabled = checkDedup.IsChecked.GetValueOrDefault();
+            var dedupIds = dedupEnabled ? DedupList.LoadIds(textDedupPath.Text.Trim()) : new HashSet<string>();
+            var skippedDedupCount = 0;
+
             foreach (var taskData in _dataList)
             {
+                if (dedupEnabled && dedupIds.Contains(taskData.Id))
+                {
+                    skippedDedupCount++;
+                    continue;
+                }
+
+                TwitchTask lastTaskForDedup = null;
                 if (checkVideo.IsChecked.GetValueOrDefault())
                 {
                     if (taskData.Id.All(char.IsDigit))
@@ -634,6 +655,7 @@ namespace TwitchDownloaderWPF
                         {
                             PageQueue.taskList.Add(downloadTask);
                         }
+                        lastTaskForDedup = downloadTask;
                     }
                     else
                     {
@@ -666,6 +688,7 @@ namespace TwitchDownloaderWPF
                         {
                             PageQueue.taskList.Add(downloadTask);
                         }
+                        lastTaskForDedup = downloadTask;
                     }
                 }
 
@@ -712,6 +735,7 @@ namespace TwitchDownloaderWPF
                     {
                         PageQueue.taskList.Add(downloadTask);
                     }
+                    lastTaskForDedup = downloadTask;
 
                     if (checkRender.IsChecked.GetValueOrDefault() && downloadOptions.DownloadFormat == ChatFormat.Json)
                     {
@@ -741,12 +765,39 @@ namespace TwitchDownloaderWPF
                         {
                             PageQueue.taskList.Add(renderTask);
                         }
+                        lastTaskForDedup = renderTask;
                     }
                 }
+                if (dedupEnabled && lastTaskForDedup != null)
+                {
+                    lastTaskForDedup.DedupVideoId = taskData.Id;
+                    lastTaskForDedup.DedupTitle = taskData.Title;
+                    lastTaskForDedup.DedupListPath = textDedupPath.Text.Trim();
+                }
+            }
+
+            if (skippedDedupCount > 0)
+            {
+                MessageBox.Show(this, $"{skippedDedupCount} item(s) were skipped because they are already in the dedup list.", "Dedup", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
             this.DialogResult = true;
             this.Close();
+        }
+
+        private void BtnDedupBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                CheckFileExists = false,
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = textDedupPath.Text
+            };
+
+            if (dialog.ShowDialog(this).GetValueOrDefault())
+            {
+                textDedupPath.Text = dialog.FileName;
+            }
         }
 
         private void btnFolder_Click(object sender, RoutedEventArgs e)

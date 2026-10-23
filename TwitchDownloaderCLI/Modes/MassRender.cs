@@ -1,10 +1,11 @@
-using SkiaSharp;
+﻿using SkiaSharp;
 using TwitchDownloaderCLI.Modes.Arguments;
 using TwitchDownloaderCLI.Tools;
 using TwitchDownloaderCore;
 using TwitchDownloaderCore.Chat;
 using TwitchDownloaderCore.Models;
 using TwitchDownloaderCore.Options;
+using TwitchDownloaderCore.Tools;
 
 namespace TwitchDownloaderCLI.Modes
 {
@@ -50,7 +51,7 @@ namespace TwitchDownloaderCLI.Modes
             var statePath = string.IsNullOrWhiteSpace(inputOptions.StateFile)
                 ? Path.Combine(outputRoot, "mass-state.txt")
                 : Path.GetFullPath(inputOptions.StateFile);
-            var doneIds = LoadStateFile(statePath);
+            var doneIds = DedupList.LoadIds(statePath);
             progress.LogInfo($"Mass render for '{login}' (id {userId}): {doneIds.Count} video(s) already recorded in {statePath}");
 
             var speedMode = inputOptions.SpeedMode.ToLower() switch
@@ -102,7 +103,7 @@ namespace TwitchDownloaderCLI.Modes
                     try
                     {
                         await ProcessVideoAsync(inputOptions, progress, video.id, video.title, video.lengthSeconds, outputRoot, speedMode, cancellationToken);
-                        AppendStateFile(statePath, video.id, video.title);
+                        DedupList.Append(statePath, video.id, video.title);
                         doneIds.Add(video.id);
                         processed++;
                         progress.LogInfo($"Recorded {video.id} in the state file ({processed}/{inputOptions.Limit} done).");
@@ -213,34 +214,6 @@ namespace TwitchDownloaderCLI.Modes
             if (slash >= 0)
                 s = s[..slash];
             return s.Any(char.IsWhiteSpace) ? null : s.ToLowerInvariant();
-        }
-
-        private static HashSet<string> LoadStateFile(string statePath)
-        {
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            if (!File.Exists(statePath))
-                return ids;
-            foreach (var line in File.ReadLines(statePath))
-            {
-                var trimmed = line.Trim();
-                if (trimmed.Length == 0 || trimmed.StartsWith('#'))
-                    continue;
-                var id = trimmed.Split([' ', '\t'], 2)[0];
-                if (id.Length > 0)
-                    ids.Add(id);
-            }
-            return ids;
-        }
-
-        private static void AppendStateFile(string statePath, string videoId, string title)
-        {
-            var dir = Path.GetDirectoryName(statePath);
-            if (!string.IsNullOrEmpty(dir))
-                Directory.CreateDirectory(dir);
-            var safeTitle = (title ?? "").Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
-            using var writer = new StreamWriter(statePath, append: true);
-            writer.WriteLine($"{videoId}\t{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}\t{safeTitle}");
-            writer.Flush();
         }
     }
 }

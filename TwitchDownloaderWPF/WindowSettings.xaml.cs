@@ -60,6 +60,8 @@ namespace TwitchDownloaderWPF
             TextChatTemplate.Text = Settings.Default.TemplateChat;
             CheckDonation.IsChecked = Settings.Default.HideDonation;
             CheckVerboseErrors.IsChecked = Settings.Default.VerboseErrors;
+            CheckDedupEnabled.IsChecked = Settings.Default.DedupEnabled;
+            TextDedupPath.Text = Settings.Default.DedupListPath;
             NumMaximumBandwidth.Value = Settings.Default.MaximumBandwidthKib;
             NumMaximumBandwidth.IsEnabled = Settings.Default.DownloadThrottleEnabled;
             CheckThrottleEnabled.IsChecked = Settings.Default.DownloadThrottleEnabled;
@@ -267,6 +269,37 @@ namespace TwitchDownloaderWPF
                 return;
 
             Settings.Default.TempPath = TextTempPath.Text;
+        }
+
+        private void CheckDedupEnabled_OnCheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (!IsInitialized)
+                return;
+
+            Settings.Default.DedupEnabled = CheckDedupEnabled.IsChecked.GetValueOrDefault();
+        }
+
+        private void TextDedupPath_OnTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!IsInitialized)
+                return;
+
+            Settings.Default.DedupListPath = TextDedupPath.Text;
+        }
+
+        private void BtnDedupBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                CheckFileExists = false,
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = TextDedupPath.Text
+            };
+
+            if (dialog.ShowDialog(this).GetValueOrDefault())
+            {
+                TextDedupPath.Text = dialog.FileName;
+            }
         }
 
         private void CheckDonation_OnCheckedChanged(object sender, RoutedEventArgs e)

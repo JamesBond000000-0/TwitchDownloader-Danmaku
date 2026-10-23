@@ -57,6 +57,15 @@
                 <CheckBox x:Name="CheckVerboseErrors" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,2,0,0" Checked="CheckVerboseErrors_OnCheckedChanged" Unchecked="CheckVerboseErrors_OnCheckedChanged" BorderBrush="{DynamicResource AppElementBorder}" />
             </StackPanel>
             <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
+                <TextBlock Margin="3,4,3,3" Text="Skip processed videos (dedup)" Foreground="{DynamicResource AppText}" />
+                <CheckBox x:Name="CheckDedupEnabled" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,2,0,0" Checked="CheckDedupEnabled_OnCheckedChanged" Unchecked="CheckDedupEnabled_OnCheckedChanged" BorderBrush="{DynamicResource AppElementBorder}" />
+            </StackPanel>
+            <WrapPanel Margin="0,0,0,10" Orientation="Horizontal">
+                <TextBlock Margin="3,9,3,3" Text="Dedup list file" Foreground="{DynamicResource AppText}"/>
+                <Button x:Name="BtnDedupBrowse" Margin="2" MinWidth="50" Content="Browse" Click="BtnDedupBrowse_Click" Background="{DynamicResource ActionButtonBackground}" BorderBrush="{DynamicResource ActionButtonBorder}" Foreground="{DynamicResource ActionButtonText}" />
+                <TextBox x:Name="TextDedupPath" Margin="2" MinWidth="250" MaxWidth="400" TextChanged="TextDedupPath_OnTextChanged" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}" />
+            </WrapPanel>
+            <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
                 <!--TODO: Add theme creation window instead of just opening the theme folder-->
                 <TextBlock Margin="3,6,3,3" Foreground="{DynamicResource AppText}"><Run Text="{lex:Loc ApplicationTheme}"/><Hyperlink ToolTipService.ShowDuration="30000" NavigateUri="Themes" RequestNavigate="Hyperlink_RequestNavigate" Foreground="{DynamicResource AppHyperlink}"><Hyperlink.ToolTip><Run Text="{lex:Loc ApplicationThemeTooltip}"/></Hyperlink.ToolTip>(?)</Hyperlink>:</TextBlock>
                 <ComboBox x:Name="ComboTheme" MinWidth="100" MaxWidth="345" HorizontalAlignment="Left" SelectionChanged="ComboTheme_OnSelectionChanged" Margin="3,0,3,0" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}" />
