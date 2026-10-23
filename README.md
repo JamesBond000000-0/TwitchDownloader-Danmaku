@@ -97,6 +97,8 @@ TwitchDownloaderCLI massrender -u mrtenzouez -o ./out --dry-run --limit 10
   1行1件のテキスト）に記録し、次回以降はスキップします。失敗した動画は記録されず、
   次回リトライされます
 - `--type ARCHIVE|HIGHLIGHT|UPLOAD` で動画種別の絞り込み、`--limit` で1回の処理本数を指定
+- `--state <パス>` で記録ファイルの保存先を変更可能（例: `--state ~/done.txt`。
+  出力フォルダとは別の場所に置いて使い回す、など）
 
 詳細は [docs/mass-render.md](docs/mass-render.md) を参照してください。
 
