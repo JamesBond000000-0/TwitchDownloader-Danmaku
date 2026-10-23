@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -151,6 +152,13 @@ namespace TwitchDownloaderWPF
             Settings.Default.DedupEnabled = checkDedup.IsChecked.GetValueOrDefault();
             Settings.Default.DedupListPath = textDedupPath.Text.Trim();
 
+            var dedupEnabled = checkDedup.IsChecked.GetValueOrDefault();
+            var dedupPath = textDedupPath.Text.Trim();
+            var dedupRecords = dedupEnabled ? DedupList.LoadRecords(dedupPath) : new Dictionary<string, HashSet<string>>();
+            var skippedDedupCount = 0;
+            var partialDedupCount = 0;
+            var dedupSummaryShown = false;
+
             if (_parentPage != null)
             {
                 if (_parentPage is PageVodDownload vodDownloadPage)
@@ -179,6 +187,17 @@ namespace TwitchDownloaderWPF
                     downloadOptions.DelayDownload = checkDelay.IsChecked.GetValueOrDefault();
                     downloadOptions.FileCollisionCallback = HandleFileCollisionCallback;
 
+                    var dedupId = downloadOptions.Id.ToString();
+                    var wantChat = checkChat.IsChecked.GetValueOrDefault();
+                    var wantRender = wantChat && checkRender.IsChecked.GetValueOrDefault() && radioJson.IsChecked == true;
+                    var needVideo = !DedupHas(dedupRecords, dedupId, DedupList.KindVideo);
+                    var needChat = wantChat && !DedupHas(dedupRecords, dedupId, DedupList.KindChat);
+                    var needRender = wantRender && !DedupHas(dedupRecords, dedupId, DedupList.KindRender);
+                    if (dedupEnabled && !needVideo && !needChat && !needRender)
+                        skippedDedupCount++;
+                    else if (dedupEnabled && (!needVideo || wantChat && !needChat || wantRender && !needRender))
+                        partialDedupCount++;
+
                     VodDownloadTask downloadTask = new VodDownloadTask
                     {
                         DownloadOptions = downloadOptions,
@@ -189,9 +208,13 @@ namespace TwitchDownloaderWPF
                         }
                     };
 
-                    lock (PageQueue.TaskLock)
+                    if (needVideo)
                     {
-                        PageQueue.taskList.Add(downloadTask);
+                        lock (PageQueue.TaskLock)
+                        {
+                            PageQueue.taskList.Add(downloadTask);
+                        }
+                        if (dedupEnabled) downloadTask.ArmDedup(dedupId, vodDownloadPage.textTitle.Text, dedupPath, DedupList.KindVideo);
                     }
 
                     if (checkChat.IsChecked.GetValueOrDefault())
@@ -237,12 +260,16 @@ namespace TwitchDownloaderWPF
                             }
                         };
 
-                        lock (PageQueue.TaskLock)
+                        if (needChat)
                         {
-                            PageQueue.taskList.Add(chatTask);
+                            lock (PageQueue.TaskLock)
+                            {
+                                PageQueue.taskList.Add(chatTask);
+                            }
+                            if (dedupEnabled) chatTask.ArmDedup(dedupId, vodDownloadPage.textTitle.Text, dedupPath, DedupList.KindChat);
                         }
 
-                        if (checkRender.IsChecked.GetValueOrDefault() && chatOptions.DownloadFormat == ChatFormat.Json)
+                        if (needRender && chatOptions.DownloadFormat == ChatFormat.Json)
                         {
                             ChatRenderOptions renderOptions = MainWindow.pageChatRender.GetOptions(Path.ChangeExtension(chatOptions.Filename.Replace(".gz", ""), '.' + MainWindow.pageChatRender.comboFormat.Text.ToLower()));
                             if (renderOptions.OutputFile.Trim() == downloadOptions.Filename!.Trim())
@@ -261,17 +288,20 @@ namespace TwitchDownloaderWPF
                                     Title = vodDownloadPage.textTitle.Text,
                                     Thumbnail = vodDownloadPage.imgThumbnail.Source
                                 },
-                                DependantTask = chatTask,
+                                DependantTask = needChat ? chatTask : null,
                             };
-                            renderTask.ChangeStatus(TwitchTaskStatus.Waiting);
+                            if (needChat)
+                                renderTask.ChangeStatus(TwitchTaskStatus.Waiting);
 
                             lock (PageQueue.TaskLock)
                             {
                                 PageQueue.taskList.Add(renderTask);
                             }
+                            if (dedupEnabled) renderTask.ArmDedup(dedupId, vodDownloadPage.textTitle.Text, dedupPath, DedupList.KindRender);
                         }
                     }
 
+                    ShowDedupSummary(skippedDedupCount, partialDedupCount);
                     this.Close();
                 }
 
@@ -313,6 +343,17 @@ namespace TwitchDownloaderWPF
                         FileCollisionCallback = HandleFileCollisionCallback,
                     };
 
+                    var dedupId = clipDownloadPage.clipId;
+                    var wantChat = checkChat.IsChecked.GetValueOrDefault();
+                    var wantRender = wantChat && checkRender.IsChecked.GetValueOrDefault() && radioJson.IsChecked == true;
+                    var needVideo = !DedupHas(dedupRecords, dedupId, DedupList.KindVideo);
+                    var needChat = wantChat && !DedupHas(dedupRecords, dedupId, DedupList.KindChat);
+                    var needRender = wantRender && !DedupHas(dedupRecords, dedupId, DedupList.KindRender);
+                    if (dedupEnabled && !needVideo && !needChat && !needRender)
+                        skippedDedupCount++;
+                    else if (dedupEnabled && (!needVideo || wantChat && !needChat || wantRender && !needRender))
+                        partialDedupCount++;
+
                     ClipDownloadTask downloadTask = new ClipDownloadTask
                     {
                         DownloadOptions = downloadOptions,
@@ -323,9 +364,13 @@ namespace TwitchDownloaderWPF
                         }
                     };
 
-                    lock (PageQueue.TaskLock)
+                    if (needVideo)
                     {
-                        PageQueue.taskList.Add(downloadTask);
+                        lock (PageQueue.TaskLock)
+                        {
+                            PageQueue.taskList.Add(downloadTask);
+                        }
+                        if (dedupEnabled) downloadTask.ArmDedup(dedupId, clipDownloadPage.textTitle.Text, dedupPath, DedupList.KindVideo);
                     }
 
                     if (checkChat.IsChecked.GetValueOrDefault())
@@ -362,12 +407,16 @@ namespace TwitchDownloaderWPF
                             }
                         };
 
-                        lock (PageQueue.TaskLock)
+                        if (needChat)
                         {
-                            PageQueue.taskList.Add(chatTask);
+                            lock (PageQueue.TaskLock)
+                            {
+                                PageQueue.taskList.Add(chatTask);
+                            }
+                            if (dedupEnabled) chatTask.ArmDedup(dedupId, clipDownloadPage.textTitle.Text, dedupPath, DedupList.KindChat);
                         }
 
-                        if (checkRender.IsChecked.GetValueOrDefault() && chatOptions.DownloadFormat == ChatFormat.Json)
+                        if (needRender && chatOptions.DownloadFormat == ChatFormat.Json)
                         {
                             ChatRenderOptions renderOptions = MainWindow.pageChatRender.GetOptions(Path.ChangeExtension(chatOptions.Filename.Replace(".gz", ""), '.' + MainWindow.pageChatRender.comboFormat.Text.ToLower()));
                             if (renderOptions.OutputFile.Trim() == downloadOptions.Filename.Trim())
@@ -386,17 +435,20 @@ namespace TwitchDownloaderWPF
                                     Title = clipDownloadPage.textTitle.Text,
                                     Thumbnail = clipDownloadPage.imgThumbnail.Source
                                 },
-                                DependantTask = chatTask
+                                DependantTask = needChat ? chatTask : null
                             };
-                            renderTask.ChangeStatus(TwitchTaskStatus.Waiting);
+                            if (needChat)
+                                renderTask.ChangeStatus(TwitchTaskStatus.Waiting);
 
                             lock (PageQueue.TaskLock)
                             {
                                 PageQueue.taskList.Add(renderTask);
                             }
+                            if (dedupEnabled) renderTask.ArmDedup(dedupId, clipDownloadPage.textTitle.Text, dedupPath, DedupList.KindRender);
                         }
                     }
 
+                    ShowDedupSummary(skippedDedupCount, partialDedupCount);
                     this.Close();
                 }
 
@@ -431,6 +483,15 @@ namespace TwitchDownloaderWPF
                     chatOptions.DelayDownload = checkDelayChat.IsChecked.GetValueOrDefault();
                     chatOptions.FileCollisionCallback = HandleFileCollisionCallback;
 
+                    var dedupId = chatOptions.Id;
+                    var wantRender = checkRender.IsChecked.GetValueOrDefault() && radioJson.IsChecked == true;
+                    var needChat = !DedupHas(dedupRecords, dedupId, DedupList.KindChat);
+                    var needRender = wantRender && !DedupHas(dedupRecords, dedupId, DedupList.KindRender);
+                    if (dedupEnabled && !needChat && !needRender)
+                        skippedDedupCount++;
+                    else if (dedupEnabled && (!needChat || wantRender && !needRender))
+                        partialDedupCount++;
+
                     ChatDownloadTask chatTask = new ChatDownloadTask
                     {
                         DownloadOptions = chatOptions,
@@ -441,12 +502,16 @@ namespace TwitchDownloaderWPF
                         }
                     };
 
-                    lock (PageQueue.TaskLock)
+                    if (needChat)
                     {
-                        PageQueue.taskList.Add(chatTask);
+                        lock (PageQueue.TaskLock)
+                        {
+                            PageQueue.taskList.Add(chatTask);
+                        }
+                        if (dedupEnabled) chatTask.ArmDedup(dedupId, chatDownloadPage.textTitle.Text, dedupPath, DedupList.KindChat);
                     }
 
-                    if (checkRender.IsChecked.GetValueOrDefault() && chatOptions.DownloadFormat == ChatFormat.Json)
+                    if (needRender && chatOptions.DownloadFormat == ChatFormat.Json)
                     {
                         ChatRenderOptions renderOptions = MainWindow.pageChatRender.GetOptions(Path.ChangeExtension(chatOptions.Filename.Replace(".gz", ""), '.' + MainWindow.pageChatRender.comboFormat.Text.ToLower()));
                         renderOptions.InputFile = chatOptions.Filename;
@@ -460,16 +525,19 @@ namespace TwitchDownloaderWPF
                                 Title = chatDownloadPage.textTitle.Text,
                                 Thumbnail = chatDownloadPage.imgThumbnail.Source
                             },
-                            DependantTask = chatTask
+                            DependantTask = needChat ? chatTask : null
                         };
-                        renderTask.ChangeStatus(TwitchTaskStatus.Waiting);
+                        if (needChat)
+                            renderTask.ChangeStatus(TwitchTaskStatus.Waiting);
 
                         lock (PageQueue.TaskLock)
                         {
                             PageQueue.taskList.Add(renderTask);
                         }
+                        if (dedupEnabled) renderTask.ArmDedup(dedupId, chatDownloadPage.textTitle.Text, dedupPath, DedupList.KindRender);
                     }
 
+                    ShowDedupSummary(skippedDedupCount, partialDedupCount);
                     this.Close();
                 }
 
@@ -548,6 +616,28 @@ namespace TwitchDownloaderWPF
 
                         string fileFormat = chatRenderPage.comboFormat.SelectedItem.ToString()!;
                         string filePath = Path.Combine(folderPath, Path.GetFileNameWithoutExtension(fileName) + "." + fileFormat.ToLower());
+                        string dedupId = null;
+                        if (dedupEnabled)
+                        {
+                            try
+                            {
+                                using var dedupDoc = JsonDocument.Parse(File.ReadAllText(fileName));
+                                if (dedupDoc.RootElement.TryGetProperty("video", out var dedupVideo))
+                                {
+                                    if (dedupVideo.TryGetProperty("id", out var dedupIdProp))
+                                        dedupId = dedupIdProp.ToString();
+                                    else if (dedupVideo.TryGetProperty("_id", out var dedupAltIdProp))
+                                        dedupId = dedupAltIdProp.ToString();
+                                }
+                            }
+                            catch
+                            {
+                                // No readable video id in this file: dedup does not apply to it.
+                            }
+                        }
+                        var needRender = dedupId is null || !DedupHas(dedupRecords, dedupId, DedupList.KindRender);
+                        if (!needRender)
+                            skippedDedupCount++;
                         ChatRenderOptions renderOptions = MainWindow.pageChatRender.GetOptions(filePath);
                         renderOptions.InputFile = fileName;
                         renderOptions.FileCollisionCallback = HandleFileCollisionCallback;
@@ -566,11 +656,20 @@ namespace TwitchDownloaderWPF
                             renderTask.Info.Thumbnail = image;
                         }
 
-                        lock (PageQueue.TaskLock)
+                        if (needRender)
                         {
-                            PageQueue.taskList.Add(renderTask);
+                            lock (PageQueue.TaskLock)
+                            {
+                                PageQueue.taskList.Add(renderTask);
+                            }
+                            if (dedupEnabled && dedupId is not null) renderTask.ArmDedup(dedupId, Path.GetFileNameWithoutExtension(filePath), dedupPath, DedupList.KindRender);
                         }
 
+                        if (!dedupSummaryShown)
+                        {
+                            dedupSummaryShown = true;
+                            ShowDedupSummary(skippedDedupCount, partialDedupCount);
+                        }
                         this.Close();
                     }
                 }
@@ -578,6 +677,22 @@ namespace TwitchDownloaderWPF
             else if (_dataList.Count > 0)
             {
                 EnqueueDataList();
+            }
+        }
+
+        private static bool DedupHas(Dictionary<string, HashSet<string>> records, string id, string kind)
+            => id is not null && records.TryGetValue(id, out var kinds) && kinds.Contains(kind);
+
+        private void ShowDedupSummary(int skippedDedupCount, int partialDedupCount)
+        {
+            if (skippedDedupCount > 0 || partialDedupCount > 0)
+            {
+                var message = "";
+                if (skippedDedupCount > 0)
+                    message += $"{skippedDedupCount} item(s) were skipped because everything requested for them is already in the dedup list.\n";
+                if (partialDedupCount > 0)
+                    message += $"{partialDedupCount} item(s) were partially processed before, so only the missing parts were queued.";
+                MessageBox.Show(this, message.Trim(), "Dedup", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -787,15 +902,7 @@ namespace TwitchDownloaderWPF
                 }
             }
 
-            if (skippedDedupCount > 0 || partialDedupCount > 0)
-            {
-                var message = "";
-                if (skippedDedupCount > 0)
-                    message += $"{skippedDedupCount} item(s) were skipped because everything requested for them is already in the dedup list.\n";
-                if (partialDedupCount > 0)
-                    message += $"{partialDedupCount} item(s) were partially processed before, so only the missing parts were queued.";
-                MessageBox.Show(this, message.Trim(), "Dedup", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+            ShowDedupSummary(skippedDedupCount, partialDedupCount);
 
             this.DialogResult = true;
             this.Close();
