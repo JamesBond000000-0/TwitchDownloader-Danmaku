@@ -247,6 +247,8 @@
                             <TextBlock Text="Speed mode" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
                             <TextBlock Text="Max lanes (0 = all)" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
                             <TextBlock Text="Band opacity (0-1)" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
+                            <TextBlock Text="Highlight badges" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
+                            <TextBlock Text="Badge color" HorizontalAlignment="Right" Margin="0,20,0,0" Foreground="{DynamicResource AppText}"/>
                         </StackPanel>
                         <StackPanel Orientation="Vertical" Margin="0,10,0,5">
                             <TextBox x:Name="textDanmakuDuration" Text="6" Width="75" HorizontalAlignment="Left" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
@@ -256,6 +258,11 @@
                             </ComboBox>
                             <TextBox x:Name="textDanmakuMaxLanes" Text="0" Width="75" HorizontalAlignment="Left" Margin="0,12,0,0" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
                             <TextBox x:Name="textDanmakuBand" Text="0" Width="75" HorizontalAlignment="Left" Margin="0,12,0,0" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
+                            <TextBox x:Name="textDanmakuHighlightBadges" Text="" Width="180" HorizontalAlignment="Left" Margin="0,12,0,0" ToolTip="Comma-separated badge ids, e.g. vip,moderator,broadcaster,verified,partner" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <CheckBox x:Name="checkDanmakuBadgeColor" Content="Separate" VerticalAlignment="Center" BorderBrush="{DynamicResource AppElementBorder}"/>
+                                <xctk:ColorPicker x:Name="colorDanmakuBadgeColor" SelectedColor="#CC9146FF" Width="50" Height="22" Margin="5,0,0,0" HorizontalAlignment="Left" Background="White" BorderBrush="{DynamicResource AppElementInnerBorder}" DropDownBackground="{DynamicResource AppElementInnerBackground}" Foreground="{DynamicResource AppText}" HeaderBackground="{DynamicResource AppElementInnerBackground}" HeaderForeground="{DynamicResource AppText}" TabBackground="{DynamicResource AppElementBorder}" TabForeground="{DynamicResource AppText}"/>
+                            </StackPanel>
                         </StackPanel>
                         <StackPanel Orientation="Vertical" Margin="15,10,5,5">
                             <CheckBox x:Name="checkDanmakuShadow" Content="Text shadow" Margin="0,4,0,0" BorderBrush="{DynamicResource AppElementBorder}"/>
@@ -263,6 +270,12 @@
                         </StackPanel>
                     </DockPanel>
                     <TextBlock Text="Canvas size, font, background color, output format and codec are taken from the other tabs. Partial render (range selection) also applies to danmaku renders." Margin="5,2,5,0" Foreground="{DynamicResource AppInnerText}" TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" Margin="5,12,5,0">
+                        <TextBlock Text="Preview time (sec)" VerticalAlignment="Center" Foreground="{DynamicResource AppText}"/>
+                        <TextBox x:Name="textDanmakuPreviewTime" Text="60" Width="60" Margin="6,0,0,0" Background="{DynamicResource AppElementBackground}" BorderBrush="{DynamicResource AppElementBorder}" Foreground="{DynamicResource AppText}"/>
+                        <Button x:Name="btnDanmakuPreview" Content="Preview" MinWidth="70" Margin="8,0,0,0" Click="BtnDanmakuPreview_Click" Background="{DynamicResource ActionButtonBackground}" Foreground="{DynamicResource ActionButtonText}" BorderBrush="{DynamicResource ActionButtonBorder}"/>
+                        <TextBlock Text="Renders one frame with the current settings. Change settings and press Update in the preview window to re-render." Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AppInnerText}" TextWrapping="Wrap" MaxWidth="430"/>
+                    </StackPanel>
                 </StackPanel>
             </TabItem>
             <TabItem Visibility="Hidden" Header="{lex:Loc RenderTabPreview}">

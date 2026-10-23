@@ -149,6 +149,8 @@ namespace TwitchDownloaderWPF
                 DanmakuMaxLanes = int.Parse(textDanmakuMaxLanes.Text),
                 DanmakuShadow = checkDanmakuShadow.IsChecked.GetValueOrDefault(),
                 DanmakuBandOpacity = double.Parse(textDanmakuBand.Text, CultureInfo.CurrentCulture),
+                HighlightBadgesArray = textDanmakuHighlightBadges.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+                HighlightBadgeColor = checkDanmakuBadgeColor.IsChecked.GetValueOrDefault() && colorDanmakuBadgeColor.SelectedColor is { } badgeColor ? new SKColor(badgeColor.R, badgeColor.G, badgeColor.B, badgeColor.A) : SKColor.Empty,
                 HideUsername = checkDanmaku.IsChecked.GetValueOrDefault() && checkDanmakuHideName.IsChecked.GetValueOrDefault(),
             };
             if (RadioEmojiNotoColor.IsChecked == true)
@@ -460,6 +462,36 @@ namespace TwitchDownloaderWPF
             textLog.Dispatcher.BeginInvoke(() =>
                 textLog.AppendText(message + Environment.NewLine)
             );
+        }
+
+        private DanmakuPreviewWindow _danmakuPreviewWindow;
+
+        private void BtnDanmakuPreview_Click(object sender, RoutedEventArgs e)
+        {
+            if (!double.TryParse(textDanmakuPreviewTime.Text, CultureInfo.CurrentCulture, out var previewTime) || previewTime < 0)
+            {
+                AppendLog(Translations.Strings.ErrorLog + "Invalid danmaku preview time.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textJson.Text) || !File.Exists(textJson.Text))
+            {
+                AppendLog(Translations.Strings.ErrorLog + Translations.Strings.NoJsonFilesSelected);
+                return;
+            }
+
+            if (_danmakuPreviewWindow is { IsLoaded: true })
+            {
+                _danmakuPreviewWindow.SetTime(previewTime);
+                _danmakuPreviewWindow.Activate();
+                _ = _danmakuPreviewWindow.UpdatePreviewAsync();
+                return;
+            }
+
+            _danmakuPreviewWindow = new DanmakuPreviewWindow(() => GetOptions(Path.Combine(Path.GetTempPath(), "TwitchDownloaderDanmaku", "danmaku-preview.png")), previewTime);
+            _danmakuPreviewWindow.Closed += (_, _) => _danmakuPreviewWindow = null;
+            _danmakuPreviewWindow.Show();
+            _ = _danmakuPreviewWindow.UpdatePreviewAsync();
         }
 
         private void BtnClearLog_Click(object sender, RoutedEventArgs e)
