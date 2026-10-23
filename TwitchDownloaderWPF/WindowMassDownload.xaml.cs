@@ -29,6 +29,7 @@ namespace TwitchDownloaderWPF
         public readonly List<string> cursorList = [];
         public int cursorIndex = 0;
         public User currentChannel;
+        public List<User> multiChannels;
         public string period = "";
         public string videoType = "";
         public int videoCount = 50;
@@ -66,35 +67,114 @@ namespace TwitchDownloaderWPF
             cursorIndex = 0;
         }
 
+        private static List<string> ParseLogins(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return [];
+
+            return text.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.Trim().TrimStart('@'))
+                .Where(x => x.Length > 0 && !x.Any(char.IsWhiteSpace))
+                .Select(x => x.ToLowerInvariant())
+                .Distinct()
+                .ToList();
+        }
+
+        private static async Task<List<User>> ResolveUsers(List<string> logins, List<string> notFound)
+        {
+            var idRes = await TwitchHelper.GetUserIds(logins);
+            var ids = new List<string>();
+            for (int i = 0; i < logins.Count; i++)
+            {
+                var entry = idRes.data.users.ElementAtOrDefault(i);
+                if (entry?.id is null)
+                    notFound.Add(logins[i]);
+                else
+                    ids.Add(entry.id);
+            }
+
+            if (ids.Count == 0)
+                return [];
+
+            var infoRes = await TwitchHelper.GetUserInfo(ids);
+            var byId = infoRes.data.users.Where(u => u is not null).ToDictionary(u => u.id);
+            return ids.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
+        }
+
         private async Task ChangeCurrentChannel()
         {
             if (!IsInitialized)
                 return;
 
-            var textTrimmed = ComboChannel.Text.Trim();
-            if (!textTrimmed.Equals(currentChannel?.login, StringComparison.InvariantCultureIgnoreCase))
+            var logins = ParseLogins(ComboChannel.Text);
+
+            // Same single channel as already shown: just refresh, like before.
+            if (logins.Count == 1 && multiChannels is null &&
+                string.Equals(logins[0], currentChannel?.login, StringComparison.InvariantCultureIgnoreCase))
             {
-                currentChannel = null;
-                if (!string.IsNullOrEmpty(textTrimmed) && !textTrimmed.Any(char.IsWhiteSpace))
+                ResetLists();
+                await UpdateList();
+                return;
+            }
+
+            currentChannel = null;
+            multiChannels = null;
+
+            if (logins.Count > 0)
+            {
+                var notFound = new List<string>();
+                try
                 {
-                    try
+                    var users = await ResolveUsers(logins, notFound);
+                    if (users.Count == 1)
                     {
-                        var idRes = await TwitchHelper.GetUserIds([textTrimmed.ToLowerInvariant()]);
-                        var infoRes = await TwitchHelper.GetUserInfo(idRes.data.users.Select(x => x.id));
-                        currentChannel = infoRes.data.users[0];
+                        currentChannel = users[0];
                     }
-                    catch (Exception ex)
+                    else if (users.Count > 1)
                     {
-                        if (Settings.Default.VerboseErrors)
-                        {
-                            MessageBox.Show(this, ex.ToString(), Translations.Strings.VerboseErrorOutput, MessageBoxButton.OK, MessageBoxImage.Error);
-                        }
+                        multiChannels = users;
+                    }
+
+                    if (users.Count > 0)
+                    {
+                        AddToRecentChannels(users.Select(u => u.login));
+                    }
+
+                    if (notFound.Count > 0)
+                    {
+                        MessageBox.Show(this, $"Channel(s) not found: {string.Join(", ", notFound)}", "Mass Downloader", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (Settings.Default.VerboseErrors)
+                    {
+                        MessageBox.Show(this, ex.ToString(), Translations.Strings.VerboseErrorOutput, MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
 
             ResetLists();
             await UpdateList();
+        }
+
+        private void AddToRecentChannels(IEnumerable<string> logins)
+        {
+            var recentChannels = Settings.Default.RecentChannels ?? new StringCollection();
+            foreach (var login in logins.Reverse())
+            {
+                recentChannels.Remove(login);
+                recentChannels.Insert(0, login);
+            }
+
+            while (recentChannels.Count > 15)
+            {
+                recentChannels.RemoveAt(recentChannels.Count - 1);
+            }
+
+            Settings.Default.RecentChannels = recentChannels;
+            Settings.Default.Save();
+            UpdateRecentChannels();
         }
 
         private async Task UpdateList()
@@ -105,6 +185,13 @@ namespace TwitchDownloaderWPF
             if (!Settings.Default.ReduceMotion)
             {
                 StatusImage.Visibility = Visibility.Visible;
+            }
+
+            if (multiChannels is { Count: > 0 })
+            {
+                await UpdateListMulti();
+                StatusImage.Visibility = Visibility.Hidden;
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(currentChannel?.login))
@@ -252,6 +339,95 @@ namespace TwitchDownloaderWPF
             }
 
             StatusImage.Visibility = Visibility.Hidden;
+        }
+
+        private async Task UpdateListMulti()
+        {
+            // Multiple channels: first page of each channel, merged into one
+            // list. Paging (Next/Prev) is per-channel and stays disabled here.
+            videoList.Clear();
+            foreach (var user in multiChannels)
+            {
+                try
+                {
+                    if (downloaderType == DownloadType.Video)
+                    {
+                        var res = await TwitchHelper.GetGqlVideos(user.login, "", videoCount, videoType);
+                        if (res.data.user != null)
+                        {
+                            foreach (var video in res.data.user.videos.edges)
+                            {
+                                var thumbUrl = video.node.previewThumbnailURL;
+                                if (!ThumbnailService.TryGetThumb(thumbUrl, out var thumbnail))
+                                {
+                                    _ = ThumbnailService.TryGetThumb(ThumbnailService.THUMBNAIL_MISSING_URL, out thumbnail);
+                                }
+
+                                videoList.Add(new TaskData
+                                {
+                                    Title = video.node.title,
+                                    Length = video.node.lengthSeconds,
+                                    Id = video.node.id,
+                                    Time = Settings.Default.UTCVideoTime ? video.node.createdAt : video.node.createdAt.ToLocalTime(),
+                                    Views = video.node.viewCount,
+                                    StreamerName = user.displayName,
+                                    StreamerId = user.id,
+                                    Game = video.node.game?.displayName ?? Translations.Strings.UnknownGame,
+                                    Thumbnail = thumbnail
+                                });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var res = await TwitchHelper.GetGqlClips(user.login, period, "", videoCount);
+                        if (res.data.user != null)
+                        {
+                            foreach (var clip in res.data.user.clips.edges)
+                            {
+                                var thumbUrl = clip.node.thumbnailURL;
+                                if (!ThumbnailService.TryGetThumb(thumbUrl, out var thumbnail))
+                                {
+                                    _ = ThumbnailService.TryGetThumb(ThumbnailService.THUMBNAIL_MISSING_URL, out thumbnail);
+                                }
+
+                                videoList.Add(new TaskData
+                                {
+                                    Title = clip.node.title,
+                                    Length = clip.node.durationSeconds,
+                                    Id = clip.node.slug,
+                                    Time = Settings.Default.UTCVideoTime ? clip.node.createdAt : clip.node.createdAt.ToLocalTime(),
+                                    Views = clip.node.viewCount,
+                                    StreamerName = user.displayName,
+                                    StreamerId = user.id,
+                                    ClipperName = clip.node.curator?.displayName ?? Translations.Strings.UnknownUser,
+                                    ClipperId = clip.node.curator?.id,
+                                    Game = clip.node.game?.displayName ?? Translations.Strings.UnknownGame,
+                                    Thumbnail = thumbnail
+                                });
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var message = downloaderType == DownloadType.Video
+                        ? string.Format(Translations.Strings.UnableToGetChannelVideosMessage, ex.Message)
+                        : string.Format(Translations.Strings.UnableToGetChannelClipsMessage, ex.Message);
+                    var title = downloaderType == DownloadType.Video
+                        ? Translations.Strings.UnableToGetChannelVideos
+                        : Translations.Strings.UnableToGetChannelClips;
+                    MessageBox.Show(this, message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+
+                    if (Settings.Default.VerboseErrors)
+                    {
+                        MessageBox.Show(this, ex.ToString(), Translations.Strings.VerboseErrorOutput, MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+
+            btnNext.IsEnabled = false;
+            btnPrev.IsEnabled = false;
         }
 
         private void Border_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -434,18 +610,91 @@ namespace TwitchDownloaderWPF
             if (!IsInitialized || ComboChannel.SelectedItem is not ComboBoxItem comboBoxItem)
                 return;
 
-            if (string.Equals(comboBoxItem.Content as string, currentChannel?.login, StringComparison.OrdinalIgnoreCase))
-                return;
-
             if (ReferenceEquals(comboBoxItem, _comboBoxItemClearChannels))
             {
                 Settings.Default.RecentChannels.Clear();
                 currentChannel = null;
+                multiChannels = null;
                 ComboChannel.Text = "";
                 UpdateRecentChannels();
+                await ChangeCurrentChannel();
+                return;
             }
 
+            if (comboBoxItem.Tag is string favoriteLogin)
+            {
+                ComboChannel.Text = favoriteLogin;
+            }
+
+            if (multiChannels is null && string.Equals(ComboChannel.Text.Trim(), currentChannel?.login, StringComparison.InvariantCultureIgnoreCase))
+                return;
+
             await ChangeCurrentChannel();
+        }
+
+        private async void btnFavorite_Click(object sender, RoutedEventArgs e)
+        {
+            var logins = ParseLogins(ComboChannel.Text);
+            if (logins.Count == 0)
+            {
+                MessageBox.Show(this, "Enter at least one channel login first (comma separated for several).", "Favorites", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var favorites = Settings.Default.FavoriteChannels ?? new StringCollection();
+            var stored = favorites.Cast<string>().ToList();
+            var toRemove = logins.Where(l => stored.Contains(l, StringComparer.OrdinalIgnoreCase)).ToList();
+            var candidates = logins.Except(toRemove, StringComparer.OrdinalIgnoreCase).ToList();
+
+            var notFound = new List<string>();
+            var added = new List<string>();
+            if (candidates.Count > 0)
+            {
+                try
+                {
+                    var users = await ResolveUsers(candidates, notFound);
+                    added = users.Select(u => u.login).ToList();
+                }
+                catch (Exception ex)
+                {
+                    if (Settings.Default.VerboseErrors)
+                    {
+                        MessageBox.Show(this, ex.ToString(), Translations.Strings.VerboseErrorOutput, MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    return;
+                }
+            }
+
+            foreach (var login in toRemove)
+            {
+                var entry = stored.FirstOrDefault(x => string.Equals(x, login, StringComparison.OrdinalIgnoreCase));
+                if (entry != null)
+                {
+                    favorites.Remove(entry);
+                }
+            }
+
+            foreach (var login in added)
+            {
+                if (!favorites.Cast<string>().Contains(login, StringComparer.OrdinalIgnoreCase))
+                {
+                    favorites.Add(login);
+                }
+            }
+
+            Settings.Default.FavoriteChannels = favorites;
+            Settings.Default.Save();
+            UpdateRecentChannels();
+
+            var message = "";
+            if (added.Count > 0)
+                message += $"Added to favorites: {string.Join(", ", added)}\n";
+            if (toRemove.Count > 0)
+                message += $"Removed from favorites: {string.Join(", ", toRemove)}\n";
+            if (notFound.Count > 0)
+                message += $"Not found: {string.Join(", ", notFound)}";
+            if (message.Length > 0)
+                MessageBox.Show(this, message.Trim(), "Favorites", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void UpdateRecentChannels()
@@ -467,6 +716,12 @@ namespace TwitchDownloaderWPF
             var oldText = ComboChannel.Text;
 
             ComboChannel.Items.Clear();
+            var favoriteChannels = Settings.Default.FavoriteChannels ?? new StringCollection();
+            foreach (var channel in favoriteChannels)
+            {
+                ComboChannel.Items.Add(new ComboBoxItem { Content = "★ " + channel, Tag = channel });
+            }
+
             foreach (var channel in recentChannels)
             {
                 ComboChannel.Items.Add(new ComboBoxItem { Content = channel });

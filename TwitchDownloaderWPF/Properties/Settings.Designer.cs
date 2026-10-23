@@ -1100,6 +1100,17 @@ namespace TwitchDownloaderWPF.Properties {
                 this["RecentChannels"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        public global::System.Collections.Specialized.StringCollection FavoriteChannels {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["FavoriteChannels"]));
+            }
+            set {
+                this["FavoriteChannels"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
