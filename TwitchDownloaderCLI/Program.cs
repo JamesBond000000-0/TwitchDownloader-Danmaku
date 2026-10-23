@@ -22,7 +22,7 @@ namespace TwitchDownloaderCLI
                 config.HelpWriter = null; // Use null instead of TextWriter.Null due to how CommandLine works internally
             });
 
-            var parserResult = parser.ParseArguments<VideoDownloadArgs, ClipDownloadArgs, ChatDownloadArgs, ChatUpdateArgs, ChatRenderArgs, DanmakuRenderArgs, InfoArgs, FfmpegArgs, CacheArgs, UpdateArgs, TsMergeArgs>(preParsedArgs);
+            var parserResult = parser.ParseArguments<VideoDownloadArgs, ClipDownloadArgs, ChatDownloadArgs, ChatUpdateArgs, ChatRenderArgs, DanmakuRenderArgs, MassRenderArgs, InfoArgs, FfmpegArgs, CacheArgs, UpdateArgs, TsMergeArgs>(preParsedArgs);
             parserResult.WithNotParsed(errors => WriteHelpText(errors, parserResult, parser.Settings));
 
             CoreLicensor.EnsureFilesExist(null);
@@ -35,6 +35,7 @@ namespace TwitchDownloaderCLI
                 .WithParsed<ChatUpdateArgs>(UpdateChat.Update)
                 .WithParsed<ChatRenderArgs>(RenderChat.Render)
                 .WithParsed<DanmakuRenderArgs>(RenderDanmaku.Render)
+                .WithParsed<MassRenderArgs>(MassRender.Run)
                 .WithParsed<InfoArgs>(InfoHandler.PrintInfo)
                 .WithParsed<FfmpegArgs>(FfmpegHandler.ParseArgs)
                 .WithParsed<CacheArgs>(CacheHandler.ParseArgs)
