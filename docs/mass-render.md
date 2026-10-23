@@ -35,10 +35,17 @@ TwitchDownloaderCLI massrender -u mrtenzouez -o ./out --type ARCHIVE --speed-mod
 
 ## state ファイル形式
 
-1行に1件、タブ区切り: `動画ID <TAB> 完了日時(UTC) <TAB> タイトル`。
-読み込み時は各行の先頭トークン（ID）だけを見るので、手で ID だけを書いた行や
-`#` で始まるコメント行も有効。既処理にしたい動画があれば ID を追記すればよい。
+1行に1件、タブ区切り: `動画ID <TAB> 完了日時(UTC) <TAB> タイトル <TAB> 種類`。
+種類は完了した処理のカンマ区切り（`video` / `chat` / `render`）で、記録は
+「ID × 種類」単位。同じ ID の行が複数あれば種類は合算される。
+種類フィールドの無い旧形式の行は `chat,render` 済みとして扱う（massrender が
+行うのはその2つだけなので実態と一致する）。手で ID だけを書いた行や
+`#` で始まるコメント行も有効（ID のみの行は旧形式として扱われる）。
 `--state` で場所を変更できる。
+
+massrender は `chat` と `render` の両方が記録済みの動画だけをスキップする。
+片方だけ記録されている場合は通常通り処理する（チャットは自分の出力先に
+取り直す）。
 
 ## 主なオプション
 
@@ -60,7 +67,9 @@ TwitchDownloaderCLI massrender -u mrtenzouez -o ./out --type ARCHIVE --speed-mod
 重複回避リストの形式は GUI の Mass Downloader 経路と共通化されている
 （実装は `TwitchDownloaderCore/Tools/DedupList.cs`）。
 GUI 側の設定で同じファイルを指定すれば、CLI で処理した動画を GUI がスキップし、
-その逆も効く。GUI 側は「その動画の最後のタスクが成功した時点」で記録する。
+その逆も効く。記録は種類ごとで、GUI 側は各タスク（動画 DL / チャット DL /
+レンダリング）が成功した時点で自分の種類を追記する。そのため「GUI でチャットだけ
+取得した動画」を CLI や GUI で後から動画 DL してもブロックされない。
 
 ## 挙動メモ
 

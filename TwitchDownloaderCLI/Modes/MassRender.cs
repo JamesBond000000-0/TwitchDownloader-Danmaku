@@ -51,8 +51,8 @@ namespace TwitchDownloaderCLI.Modes
             var statePath = string.IsNullOrWhiteSpace(inputOptions.StateFile)
                 ? Path.Combine(outputRoot, "mass-state.txt")
                 : Path.GetFullPath(inputOptions.StateFile);
-            var doneIds = DedupList.LoadIds(statePath);
-            progress.LogInfo($"Mass render for '{login}' (id {userId}): {doneIds.Count} video(s) already recorded in {statePath}");
+            var doneRecords = DedupList.LoadRecords(statePath);
+            progress.LogInfo($"Mass render for '{login}' (id {userId}): {doneRecords.Count} video(s) already recorded in {statePath}");
 
             var speedMode = inputOptions.SpeedMode.ToLower() switch
             {
@@ -87,10 +87,10 @@ namespace TwitchDownloaderCLI.Modes
                         break;
                     scanned++;
                     var video = edge.node;
-                    if (doneIds.Contains(video.id))
+                    if (doneRecords.TryGetValue(video.id, out var doneKinds) && doneKinds.Contains(DedupList.KindChat) && doneKinds.Contains(DedupList.KindRender))
                     {
                         skipped++;
-                        progress.LogInfo($"Skip {video.id} (already in state file): {video.title}");
+                        progress.LogInfo($"Skip {video.id} (chat+render already recorded): {video.title}");
                         continue;
                     }
                     if (inputOptions.DryRun)
@@ -103,8 +103,11 @@ namespace TwitchDownloaderCLI.Modes
                     try
                     {
                         await ProcessVideoAsync(inputOptions, progress, video.id, video.title, video.lengthSeconds, outputRoot, speedMode, cancellationToken);
-                        DedupList.Append(statePath, video.id, video.title);
-                        doneIds.Add(video.id);
+                        DedupList.Append(statePath, video.id, video.title, DedupList.KindChat, DedupList.KindRender);
+                        if (!doneRecords.TryGetValue(video.id, out var rec))
+                            doneRecords[video.id] = rec = new HashSet<string>();
+                        rec.Add(DedupList.KindChat);
+                        rec.Add(DedupList.KindRender);
                         processed++;
                         progress.LogInfo($"Recorded {video.id} in the state file ({processed}/{inputOptions.Limit} done).");
                     }

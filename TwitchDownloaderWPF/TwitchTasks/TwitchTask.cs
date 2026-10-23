@@ -43,13 +43,22 @@ namespace TwitchDownloaderWPF.TwitchTasks
         public TwitchTask DependantTask { get; init; }
 
         /// <summary>
-        /// When set (by the Mass Downloader queue flow), this video/clip ID is
-        /// appended to the dedup list if this task finishes successfully.
-        /// Only the last task of a per-video chain carries these values.
+        /// When armed (by the Mass Downloader queue flow), this task appends
+        /// its video/clip ID to the dedup list, tagged with its own kind
+        /// (video/chat/render), if it finishes successfully.
         /// </summary>
         public string DedupVideoId { get; set; }
         public string DedupTitle { get; set; }
         public string DedupListPath { get; set; }
+        public string DedupKind { get; set; }
+
+        public void ArmDedup(string videoId, string title, string listPath, string kind)
+        {
+            DedupVideoId = videoId;
+            DedupTitle = title;
+            DedupListPath = listPath;
+            DedupKind = kind;
+        }
         public abstract string TaskType { get; }
 
         public Exception Exception
@@ -90,11 +99,11 @@ namespace TwitchDownloaderWPF.TwitchTasks
 
         public void ChangeStatus(TwitchTaskStatus newStatus)
         {
-            if (newStatus is TwitchTaskStatus.Finished && DedupVideoId is not null)
+            if (newStatus is TwitchTaskStatus.Finished && DedupVideoId is not null && DedupKind is not null)
             {
                 try
                 {
-                    DedupList.Append(DedupListPath ?? DedupSettings.GetEffectivePath(), DedupVideoId, DedupTitle);
+                    DedupList.Append(DedupListPath ?? DedupSettings.GetEffectivePath(), DedupVideoId, DedupTitle, DedupKind);
                 }
                 catch
                 {
