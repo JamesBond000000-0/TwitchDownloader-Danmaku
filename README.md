@@ -37,7 +37,7 @@ side branches:
 | --- | --- | --- |
 | [`danmaku`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/danmaku/README.md) | ニコニコ式に流れるコメント (danmaku) レンダリング（GUI + CLI）。配布は `danmaku-v*` タグの Releases | v0.1.0 リリース済み |
 | [`mass-cli`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/mass-cli/README.md) | `danmaku` に加え、CLI 一括処理 `massrender`（指定ユーザーの動画取得 → チャットDL → danmaku 描画、成功 ID の記録による重複回避つき） | 開発中 |
-| [`danmaku-mass`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/danmaku-mass/README.md) | `danmaku` と `mass-cli` を合体した統合ブランチ。さらに GUI の重複回避（動画/チャット/レンダリングの種類別記録）、Mass Downloader の複数チャンネル一括表示とお気に入り（☆登録・カンマ一括・ワンクリック表示）を含む。さらにバッジハイライト（バッジ別の色分け対応）と、設定を見ながら調整できるGUIプレビューを追加 | **v0.3.0 リリース済み（最新）** |
+| [`danmaku-mass`](https://github.com/JamesBond000000-0/TwitchDownloader-Danmaku/blob/danmaku-mass/README.md) | `danmaku` と `mass-cli` を合体した統合ブランチ。さらに GUI の重複回避（動画/チャット/レンダリングの種類別記録）、Mass Downloader の複数チャンネル一括表示とお気に入り（☆登録・カンマ一括・ワンクリック表示）を含む。さらにバッジハイライト（バッジ別の色分け対応）と、設定を見ながら調整できるGUIプレビューを追加。重複回避は単発投入でも有効 | **v0.3.1 リリース済み（最新）** |
 
 機能の説明・使い方は各ブランチの README を参照してください。
 
