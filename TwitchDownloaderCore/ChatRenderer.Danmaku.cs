@@ -55,7 +55,8 @@ namespace TwitchDownloaderCore
             public required int LaneTop { get; init; } // in lane units
             public int LanesNeeded { get; init; } = 1;
             public bool IsHighlighted { get; init; }
-            public bool IsBadgeHighlight { get; init; }
+            public SKColor HighlightColor { get; init; }
+            public double Scale { get; init; } = 1.0;
         }
 
         private readonly Dictionary<string, DanmakuTemplate> _danmakuTemplateCache = new();
@@ -74,8 +75,7 @@ namespace TwitchDownloaderCore
         };
 
         private SKPaint _danmakuBandPaint;
-        private SKPaint _danmakuHighlightPaint;
-        private SKPaint _danmakuBadgeHighlightPaint;
+        private readonly Dictionary<SKColor, SKPaint> _danmakuHighlightPaints = new();
 
         // Shared setup with RenderAsyncImpl: fetch images, set fonts and the
         // cached metrics that GenerateCommentSection relies on.
@@ -119,20 +119,34 @@ namespace TwitchDownloaderCore
         private DanmakuTemplate GetDanmakuTemplate(int commentIndex, int sectionDefaultYPos)
         {
             var comment = chatRoot.comments[commentIndex];
+            // Highlighted comments may keep their username even when
+            // usernames are otherwise hidden (DanmakuHighlightShowName).
+            var (hitUser, hitBadge, _) = GetHighlightState(comment);
+            bool showName = !renderOptions.HideUsername || (renderOptions.DanmakuHighlightShowName && (hitUser || hitBadge));
             // Identical messages from the same user (spam, repeated emotes)
             // are very common in Twitch chat; reuse their rendered sprite.
             string cacheKey = string.Concat(
                 comment.message.user_notice_params?.msg_id, "|",
                 comment.commenter?.display_name, "|",
                 comment.message.user_color, "|",
-                comment.message.body);
+                comment.message.body, showName ? "|name" : "|noname");
 
             if (_danmakuTemplateCache.TryGetValue(cacheKey, out var cached))
             {
                 return cached;
             }
 
-            var section = GenerateCommentSection(commentIndex, sectionDefaultYPos);
+            var prevHideUsername = renderOptions.HideUsername;
+            renderOptions.HideUsername = !showName;
+            CommentSection section;
+            try
+            {
+                section = GenerateCommentSection(commentIndex, sectionDefaultYPos);
+            }
+            finally
+            {
+                renderOptions.HideUsername = prevHideUsername;
+            }
             if (section?.Image is null)
             {
                 return null;
@@ -178,7 +192,7 @@ namespace TwitchDownloaderCore
             double uniformSpeed = canvasWidth / scrollDurationSeconds;
             double maxTravel = speedMode == DanmakuSpeedMode.FixedDuration
                 ? scrollDurationSeconds
-                : (canvasWidth + MaxAssumedSpriteWidth) / uniformSpeed;
+                : (canvasWidth + MaxAssumedSpriteWidth * Math.Max(1.0, Math.Clamp(renderOptions.DanmakuHighlightScale, 0.25, 4))) / uniformSpeed;
             double simStart = Math.Max(0, startSeconds - maxTravel);
 
             for (int i = 0; i < chatRoot.comments.Count; i++)
@@ -200,11 +214,21 @@ namespace TwitchDownloaderCore
                     continue;
                 }
 
+                // Highlight resolution is shared with the standard
+                // renderer (GetMessageBackground). Highlighted sprites can
+                // be drawn larger (DanmakuHighlightScale); lane assignment
+                // and speeds use the scaled size so nothing overlaps.
+                var (userHit, badgeHit, badgeColor) = GetHighlightState(comment);
+                bool isHighlighted = userHit || badgeHit;
+                double scale = isHighlighted ? Math.Clamp(renderOptions.DanmakuHighlightScale, 0.25, 4) : 1.0;
+                double effWidth = template.Width * scale;
+                double effHeight = template.Height * scale;
+
                 double speed = speedMode == DanmakuSpeedMode.FixedDuration
-                    ? (canvasWidth + template.Width) / scrollDurationSeconds
+                    ? (canvasWidth + effWidth) / scrollDurationSeconds
                     : uniformSpeed;
-                double exit = start + (canvasWidth + template.Width) / speed;
-                int lanesNeeded = Math.Max(1, (int)Math.Ceiling(template.Height / (double)lanePitch));
+                double exit = start + (canvasWidth + effWidth) / speed;
+                int lanesNeeded = Math.Max(1, (int)Math.Ceiling(effHeight / (double)lanePitch));
 
                 int laneTop = -1;
                 for (int lane = 0; lane + lanesNeeded <= laneCount; lane++)
@@ -235,17 +259,6 @@ namespace TwitchDownloaderCore
                     continue;
                 }
 
-                // Mirror the standard renderer's highlight check
-                // (GetMessageBackground): the highlight is drawn as a band
-                // behind the sprite in DrawDanmakuFrame.
-                bool userHit = renderOptions.HighlightUsersArray.Length > 0
-                    && (renderOptions.HighlightUsersArray.Contains(comment.commenter.name, StringComparer.OrdinalIgnoreCase)
-                        || renderOptions.HighlightUsersArray.Contains(comment.commenter.display_name, StringComparer.OrdinalIgnoreCase));
-                bool badgeHit = renderOptions.HighlightBadgesArray.Length > 0
-                    && comment.message.user_badges is { Count: > 0 }
-                    && comment.message.user_badges.Any(b => renderOptions.HighlightBadgesArray.Contains(b._id, StringComparer.OrdinalIgnoreCase));
-                bool isHighlighted = userHit || badgeHit;
-
                 var sprite = new DanmakuSprite
                 {
                     Template = template,
@@ -255,7 +268,8 @@ namespace TwitchDownloaderCore
                     LaneTop = laneTop,
                     LanesNeeded = lanesNeeded,
                     IsHighlighted = isHighlighted,
-                    IsBadgeHighlight = badgeHit && !userHit,
+                    HighlightColor = badgeHit && !userHit ? badgeColor : renderOptions.HighlightUserColor,
+                    Scale = scale,
                 };
                 for (int k = 0; k < lanesNeeded; k++)
                 {
@@ -276,7 +290,7 @@ namespace TwitchDownloaderCore
         private static bool CanEnterAfter(DanmakuSprite prev, double start, double speed, int canvasWidth)
         {
             // The previous sprite's tail must be fully on screen.
-            if (start < prev.StartSeconds + prev.Template.Width / prev.Speed)
+            if (start < prev.StartSeconds + prev.Template.Width * prev.Scale / prev.Speed)
             {
                 return false;
             }
@@ -316,14 +330,29 @@ namespace TwitchDownloaderCore
                 float x = (float)(canvasWidth - sprite.Speed * (timeSeconds - sprite.StartSeconds));
                 float y = sprite.LaneTop * lanePitch;
 
+                // Highlighted sprites can be scaled up; draw them in a
+                // translated/scaled local space so the band, shadow, image
+                // and emotes all scale together.
+                bool scaled = sprite.Scale != 1.0;
+                if (scaled)
+                {
+                    canvas.Save();
+                    canvas.Translate(x, y);
+                    canvas.Scale((float)sprite.Scale, (float)sprite.Scale);
+                    x = 0;
+                    y = 0;
+                }
+
                 // Highlight band for users on the highlight list, drawn in
                 // the configured highlight color (the standard renderer
                 // paints the same color behind the whole comment row).
                 if (sprite.IsHighlighted)
                 {
-                    _danmakuHighlightPaint ??= new SKPaint { IsAntialias = true, Color = renderOptions.HighlightUserColor };
-                    _danmakuBadgeHighlightPaint ??= new SKPaint { IsAntialias = true, Color = renderOptions.HighlightBadgeColor != SKColor.Empty ? renderOptions.HighlightBadgeColor : renderOptions.HighlightUserColor };
-                    var highlightPaint = sprite.IsBadgeHighlight ? _danmakuBadgeHighlightPaint : _danmakuHighlightPaint;
+                    if (!_danmakuHighlightPaints.TryGetValue(sprite.HighlightColor, out var highlightPaint))
+                    {
+                        highlightPaint = new SKPaint { IsAntialias = true, Color = sprite.HighlightColor };
+                        _danmakuHighlightPaints[sprite.HighlightColor] = highlightPaint;
+                    }
                     if (highlightPaint.Color.Alpha > 0)
                     {
                         float hPad = (float)(renderOptions.FontSize * 0.35);
@@ -366,6 +395,11 @@ namespace TwitchDownloaderCore
                 {
                     canvas.DrawImage(frame, x + drawPoint.X, y + drawPoint.Y);
                 }
+
+                if (scaled)
+                {
+                    canvas.Restore();
+                }
             }
         }
 
@@ -378,8 +412,11 @@ namespace TwitchDownloaderCore
             _danmakuTemplateCache.Clear();
             _danmakuBandPaint?.Dispose();
             _danmakuBandPaint = null;
-            _danmakuHighlightPaint?.Dispose();
-            _danmakuHighlightPaint = null;
+            foreach (var paint in _danmakuHighlightPaints.Values)
+            {
+                paint.Dispose();
+            }
+            _danmakuHighlightPaints.Clear();
         }
 
         /// <summary>

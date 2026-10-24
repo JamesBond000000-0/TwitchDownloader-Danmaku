@@ -57,6 +57,9 @@ namespace TwitchDownloaderCLI.Modes
                 HighlightUsersArray = string.IsNullOrWhiteSpace(inputOptions.HighlightUsers) ? [] : inputOptions.HighlightUsers.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
                 HighlightBadgesArray = string.IsNullOrWhiteSpace(inputOptions.HighlightBadges) ? [] : inputOptions.HighlightBadges.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
                 HighlightBadgeColor = string.IsNullOrWhiteSpace(inputOptions.HighlightBadgeColor) ? SKColor.Empty : SKColor.Parse(inputOptions.HighlightBadgeColor),
+                HighlightBadgeColors = ParseBadgeColors(inputOptions.HighlightBadgeColors),
+                DanmakuHighlightShowName = inputOptions.HighlightShowName,
+                DanmakuHighlightScale = inputOptions.HighlightScale,
                 DanmakuShadow = inputOptions.Shadow,
                 DanmakuBandOpacity = inputOptions.BandOpacity,
                 Outline = inputOptions.Outline,
@@ -87,6 +90,24 @@ namespace TwitchDownloaderCLI.Modes
             {
                 chatRenderer.RenderDanmakuFrameAsync(inputOptions.Time, inputOptions.Duration, inputOptions.Width, inputOptions.Height, inputOptions.Offset, speedMode, inputOptions.MaxLanes).Wait();
             }
+        }
+
+        private static Dictionary<string, SKColor> ParseBadgeColors(string spec)
+        {
+            var result = new Dictionary<string, SKColor>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(spec))
+                return result;
+
+            foreach (var pair in spec.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            {
+                var separator = pair.IndexOf(':');
+                if (separator <= 0)
+                    continue;
+
+                result[pair[..separator].Trim()] = SKColor.Parse(pair[(separator + 1)..].Trim());
+            }
+
+            return result;
         }
     }
 }

@@ -102,6 +102,15 @@ namespace TwitchDownloaderCLI.Modes.Arguments
         [Option("highlight-badge-color", Default = "", HelpText = "Separate highlight band color for --highlight-badges matches, in the format '#RRGGBB' or '#AARRGGBB'. Empty = use --highlight-user-color.")]
         public string HighlightBadgeColor { get; set; }
 
+        [Option("highlight-badge-colors", Default = "", HelpText = "Per-badge highlight colors as comma-separated 'badge:#AARRGGBB' pairs, e.g. 'moderator:#CC00C853,vip:#CCE005B9'. Earlier entries win when a comment carries several of the badges. Badges listed here are highlighted even without --highlight-badges.")]
+        public string HighlightBadgeColors { get; set; }
+
+        [Option("highlight-show-name", Default = false, HelpText = "Keep the username on highlighted comments even when names are hidden (--show-name false). Danmaku only.")]
+        public bool HighlightShowName { get; set; }
+
+        [Option("highlight-scale", Default = 1.0, HelpText = "Scale factor for highlighted comments in danmaku mode (1 = normal size, clamped to 0.25-4).")]
+        public double HighlightScale { get; set; }
+
         [Option("offline", Default = false, HelpText = "Render completely offline using only embedded emotes, badges, and bits from the input json.")]
         public bool Offline { get; set; }
 

@@ -804,19 +804,47 @@ namespace TwitchDownloaderCore
             return lastUpdate;
         }
 
+        // Shared highlight resolution for both renderers: a username-list
+        // match wins over badges; among badges, a per-badge color
+        // (HighlightBadgeColors, in configuration order) wins over the
+        // shared badge color, which falls back to the user highlight color.
+        private (bool UserHit, bool BadgeHit, SKColor BadgeColor) GetHighlightState(Comment comment)
+        {
+            var userHit = renderOptions.HighlightUsersArray.Length > 0
+                && (renderOptions.HighlightUsersArray.Contains(comment.commenter.name, StringComparer.OrdinalIgnoreCase)
+                    || renderOptions.HighlightUsersArray.Contains(comment.commenter.display_name, StringComparer.OrdinalIgnoreCase));
+
+            var badgeHit = false;
+            SKColor? perBadgeColor = null;
+            if (comment.message.user_badges is { Count: > 0 } badges)
+            {
+                foreach (var entry in renderOptions.HighlightBadgeColors)
+                {
+                    if (badges.Any(b => string.Equals(b._id, entry.Key, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        badgeHit = true;
+                        perBadgeColor = entry.Value;
+                        break;
+                    }
+                }
+
+                if (!badgeHit && renderOptions.HighlightBadgesArray.Length > 0
+                    && badges.Any(b => renderOptions.HighlightBadgesArray.Contains(b._id, StringComparer.OrdinalIgnoreCase)))
+                {
+                    badgeHit = true;
+                }
+            }
+
+            var badgeColor = perBadgeColor
+                ?? (renderOptions.HighlightBadgeColor != SKColor.Empty ? renderOptions.HighlightBadgeColor : renderOptions.HighlightUserColor);
+            return (userHit, badgeHit, badgeColor);
+        }
+
         private SKColor GetMessageBackground(int commentIndex, [AllowNull] out SKPaint paint)
         {
-            var commenter = chatRoot.comments[commentIndex].commenter;
-            var userHit = renderOptions.HighlightUsersArray.Length > 0
-                                && (renderOptions.HighlightUsersArray.Contains(commenter.name, StringComparer.OrdinalIgnoreCase)
-                                    || renderOptions.HighlightUsersArray.Contains(commenter.display_name, StringComparer.OrdinalIgnoreCase));
-            var badgeHit = renderOptions.HighlightBadgesArray.Length > 0
-                                && chatRoot.comments[commentIndex].message.user_badges is { Count: > 0 } badges
-                                && badges.Any(b => renderOptions.HighlightBadgesArray.Contains(b._id, StringComparer.OrdinalIgnoreCase));
+            var (userHit, badgeHit, badgeColor) = GetHighlightState(chatRoot.comments[commentIndex]);
             var isHighlighted = userHit || badgeHit;
-            var highlightColor = badgeHit && !userHit && renderOptions.HighlightBadgeColor != SKColor.Empty
-                                ? renderOptions.HighlightBadgeColor
-                                : renderOptions.HighlightUserColor;
+            var highlightColor = badgeHit && !userHit ? badgeColor : renderOptions.HighlightUserColor;
 
             if (isHighlighted)
             {

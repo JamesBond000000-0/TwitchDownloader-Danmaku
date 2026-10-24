@@ -55,6 +55,7 @@ namespace TwitchDownloaderCore.Options
         public string[] HighlightUsersArray { get; set; } = [];
         public string[] HighlightBadgesArray { get; set; } = [];
         public SKColor HighlightBadgeColor { get; set; } = SKColor.Empty;
+        public Dictionary<string, SKColor> HighlightBadgeColors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public string[] IgnoreUsersArray { get; set; } = [];
         public string[] BannedWordsArray { get; set; } = [];
         public double EmoteScale { get; set; } = 1.0;
@@ -98,5 +99,7 @@ namespace TwitchDownloaderCore.Options
         public int DanmakuMaxLanes { get; set; } = 0;
         public bool DanmakuShadow { get; set; } = false;
         public double DanmakuBandOpacity { get; set; } = 0.0;
+        public bool DanmakuHighlightShowName { get; set; } = false;
+        public double DanmakuHighlightScale { get; set; } = 1.0;
     }
 }
