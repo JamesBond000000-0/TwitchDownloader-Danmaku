@@ -151,8 +151,17 @@ namespace TwitchDownloaderWPF
                 DanmakuBandOpacity = double.Parse(textDanmakuBand.Text, CultureInfo.CurrentCulture),
                 HighlightBadgesArray = textDanmakuHighlightBadges.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
                 HighlightBadgeColor = checkDanmakuBadgeColor.IsChecked.GetValueOrDefault() && colorDanmakuBadgeColor.SelectedColor is { } badgeColor ? new SKColor(badgeColor.R, badgeColor.G, badgeColor.B, badgeColor.A) : SKColor.Empty,
+                HighlightBadgeColors = new Dictionary<string, SKColor>(_danmakuBadgeColors, StringComparer.OrdinalIgnoreCase),
+                DanmakuHighlightScale = double.Parse(textDanmakuHighlightScale.Text, CultureInfo.CurrentCulture),
+                DanmakuHighlightShowName = checkDanmakuHighlightShowName.IsChecked.GetValueOrDefault(),
                 HideUsername = checkDanmaku.IsChecked.GetValueOrDefault() && checkDanmakuHideName.IsChecked.GetValueOrDefault(),
             };
+            if (_danmakuBadgeColors.Count > 0)
+            {
+                options.HighlightBadgesArray = options.HighlightBadgesArray
+                    .Union(_danmakuBadgeColors.Keys, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
             if (RadioEmojiNotoColor.IsChecked == true)
                 options.EmojiVendor = EmojiVendor.GoogleNotoColor;
             else if (RadioEmojiTwemoji.IsChecked == true)
@@ -407,6 +416,7 @@ namespace TwitchDownloaderWPF
                     _ = double.Parse(textDanmakuDuration.Text, CultureInfo.CurrentCulture);
                     _ = int.Parse(textDanmakuMaxLanes.Text);
                     _ = double.Parse(textDanmakuBand.Text, CultureInfo.CurrentCulture);
+                    _ = double.Parse(textDanmakuHighlightScale.Text, CultureInfo.CurrentCulture);
                 }
             }
             catch (Exception ex)
@@ -464,7 +474,24 @@ namespace TwitchDownloaderWPF
             );
         }
 
+        private readonly Dictionary<string, SKColor> _danmakuBadgeColors = new(StringComparer.OrdinalIgnoreCase);
         private DanmakuPreviewWindow _danmakuPreviewWindow;
+
+        private void BtnDanmakuBadgeColors_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new DanmakuBadgeColorsWindow(_danmakuBadgeColors)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                _danmakuBadgeColors.Clear();
+                foreach (var pair in dialog.Result)
+                {
+                    _danmakuBadgeColors[pair.Key] = pair.Value;
+                }
+            }
+        }
 
         private void BtnDanmakuPreview_Click(object sender, RoutedEventArgs e)
         {
