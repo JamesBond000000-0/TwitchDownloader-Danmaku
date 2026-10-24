@@ -56,6 +56,7 @@ Danmaku タブの項目:
 | Band opacity (0 = off) | 文字の背後に敷く半透明の帯（明るい映像での視認性向上） | 0 |
 | Highlight badges | ハイライトするバッジ ID（カンマ区切り。例: vip,moderator,broadcaster,verified,partner） | 空 |
 | Badge color | バッジ用ハイライト色。「Separate」にチェックした時だけ有効（未指定時は Highlight Users の色） | オフ |
+| Highlight scale | ハイライトしたコメントだけの拡大率（1 = 通常サイズ） | 1 |
 | Drop shadow | 文字に影を付ける | オフ |
 | Hide usernames | ユーザー名を出さない | オフ |
 
@@ -68,6 +69,12 @@ Ignore Users / 禁止ワードは danmaku でも有効で、Highlight Users は�
 できます。両方に一致した場合はユーザー名指定の色が優先されます。なお Twitch の認証済みは
 アーカイブのデータ形式によって `verified` と `partner` のどちらで入っていることもあるので、
 確実に拾いたい場合は両方指定してください。
+
+さらに、Danmaku タブの **「Per-badge colors...」** ボタンから、配信者・モデレーター・
+VIP など**バッジごとに色**を付けられます（複数バッジ持ちの場合は一覧の上にある方が優先）。
+**「Highlighted keep username」** にチェックすると、ユーザー名を消す設定でも
+ハイライトしたコメントだけは名前が残ります。**Highlight scale** でハイライトした
+コメントだけを大きく表示することもできます。
 
 ### GUI: プレビューで見ながら調整
 
@@ -134,6 +141,11 @@ TwitchDownloaderCLI danmakurender -i chat.json -o frame.png --time 1800
 ハイライト: `--highlight-users <名前,名前>`、`--highlight-badges <バッジID,バッジID>`、
 `--highlight-user-color <#AARRGGBB>`、`--highlight-badge-color <#AARRGGBB>`
 （バッジ用を省略するとユーザー用の色。書式は `#RRGGBB` でも可）。
+バッジごとの色は `--highlight-badge-colors <バッジID:#AARRGGBB,...>`
+（書いた順が優先順位。そのバッジは `--highlight-badges` なしでもハイライトされます）。
+`--highlight-show-name` は名前を消す設定（`--show-name false`）でもハイライトした
+コメントだけ名前を残し、`--highlight-scale <倍率>` はハイライトしたコメントだけを
+拡大します（どちらも danmaku 用）。
 混みすぎてレーンに入らなかったコメントは間引かれ、件数がログに表示されます。
 
 ### CLI 一括処理 (massrender、`mass-cli` ブランチ)
