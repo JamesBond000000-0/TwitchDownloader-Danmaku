@@ -57,6 +57,7 @@ Danmaku タブの項目:
 | Highlight badges | ハイライトするバッジ ID（カンマ区切り。例: vip,moderator,broadcaster,verified,partner） | 空 |
 | Badge color | バッジ用ハイライト色。「Separate」にチェックした時だけ有効（未指定時は Highlight Users の色） | オフ |
 | Highlight scale | ハイライトしたコメントだけの拡大率（1 = 通常サイズ） | 1 |
+| GPU rendering (experimental) | コメント描画を GPU で行う（Skia GPU バックエンド）。使えない環境では自動で CPU 描画にフォールバック | オフ |
 | Drop shadow | 文字に影を付ける | オフ |
 | Hide usernames | ユーザー名を出さない | オフ |
 
@@ -146,6 +147,7 @@ TwitchDownloaderCLI danmakurender -i chat.json -o frame.png --time 1800
 `--highlight-show-name` は名前を消す設定（`--show-name false`）でもハイライトした
 コメントだけ名前を残し、`--highlight-scale <倍率>` はハイライトしたコメントだけを
 拡大します（どちらも danmaku 用）。
+描画の GPU 化は `--gpu`（実験的。GPU が使えない環境では CPU 描画に自動フォールバックします）。
 混みすぎてレーンに入らなかったコメントは間引かれ、件数がログに表示されます。
 
 ### CLI 一括処理 (massrender、`mass-cli` ブランチ)
