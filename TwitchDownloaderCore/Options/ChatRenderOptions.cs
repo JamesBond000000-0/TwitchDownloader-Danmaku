@@ -101,5 +101,6 @@ namespace TwitchDownloaderCore.Options
         public double DanmakuBandOpacity { get; set; } = 0.0;
         public bool DanmakuHighlightShowName { get; set; } = false;
         public double DanmakuHighlightScale { get; set; } = 1.0;
+        public bool DanmakuUseGpu { get; set; } = false;
     }
 }

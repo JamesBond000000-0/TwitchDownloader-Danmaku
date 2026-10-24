@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using TwitchDownloaderCore.Models.Render;
+using TwitchDownloaderCore.Tools;
 
 namespace TwitchDownloaderCore
 {
@@ -76,6 +77,8 @@ namespace TwitchDownloaderCore
 
         private SKPaint _danmakuBandPaint;
         private readonly Dictionary<SKColor, SKPaint> _danmakuHighlightPaints = new();
+        private GpuRenderContext _gpuContext;
+        private bool _gpuUnavailable;
 
         // Shared setup with RenderAsyncImpl: fetch images, set fonts and the
         // cached metrics that GenerateCommentSection relies on.
@@ -403,6 +406,52 @@ namespace TwitchDownloaderCore
             }
         }
 
+        /// <summary>
+        /// Returns the shared GPU context when GPU rendering was requested
+        /// (DanmakuUseGpu) and could be initialized; null (meaning: render
+        /// on the CPU) when it was not requested or is unavailable. The
+        /// context is created lazily and disposed via
+        /// <see cref="DisposeGpuContext"/> at the end of the render call.
+        /// </summary>
+        private GpuRenderContext GetGpuContext()
+        {
+            if (!renderOptions.DanmakuUseGpu || _gpuUnavailable)
+            {
+                return null;
+            }
+
+            if (_gpuContext is not null)
+            {
+                return _gpuContext;
+            }
+
+            _gpuContext = GpuRenderContext.TryCreate(out string failureReason);
+            if (_gpuContext is null)
+            {
+                _gpuUnavailable = true;
+                _progress.LogInfo($"Danmaku GPU rendering unavailable ({failureReason}); falling back to CPU rendering.");
+            }
+            else
+            {
+                _progress.LogInfo($"Danmaku GPU rendering active ({_gpuContext.RendererName}).");
+            }
+
+            return _gpuContext;
+        }
+
+        private void DisableGpuContext(Exception exception)
+        {
+            _progress.LogInfo($"Danmaku GPU rendering failed ({exception.Message}); falling back to CPU rendering.");
+            _gpuUnavailable = true;
+            DisposeGpuContext();
+        }
+
+        private void DisposeGpuContext()
+        {
+            _gpuContext?.Dispose();
+            _gpuContext = null;
+        }
+
         private void DisposeDanmakuTemplates()
         {
             foreach (var template in _danmakuTemplateCache.Values)
@@ -437,19 +486,40 @@ namespace TwitchDownloaderCore
                 var sprites = BuildDanmakuTimeline(timeSeconds, timeSeconds + 0.001, scrollDurationSeconds, speedMode, maxLanes, canvasWidth, canvasHeight, sectionDefaultYPos, offsetSeconds, out int dropped);
 
                 using var frameBitmap = new SKBitmap(new SKImageInfo(canvasWidth, canvasHeight, SKColorType.Bgra8888, SKAlphaType.Premul));
-                using (var frameCanvas = new SKCanvas(frameBitmap))
+                SKImage frameImage = null;
+                var gpu = GetGpuContext();
+                if (gpu is not null)
                 {
-                    DrawDanmakuFrame(frameCanvas, sprites, timeSeconds, canvasWidth, renderOptions.SectionHeight);
+                    try
+                    {
+                        frameImage = gpu.RenderImage(canvasWidth, canvasHeight, canvas => DrawDanmakuFrame(canvas, sprites, timeSeconds, canvasWidth, renderOptions.SectionHeight));
+                    }
+                    catch (Exception ex)
+                    {
+                        DisableGpuContext(ex);
+                    }
+                }
+
+                if (frameImage is null)
+                {
+                    using (var frameCanvas = new SKCanvas(frameBitmap))
+                    {
+                        DrawDanmakuFrame(frameCanvas, sprites, timeSeconds, canvasWidth, renderOptions.SectionHeight);
+                    }
+
+                    frameImage = SKImage.FromBitmap(frameBitmap);
                 }
 
                 var outputInfo = renderOptions.FileCollisionCallback(new FileInfo(renderOptions.OutputFile));
                 renderOptions.OutputFile = outputInfo.FullName;
 
-                using var frameImage = SKImage.FromBitmap(frameBitmap);
-                using var pngData = frameImage.Encode(SKEncodedImageFormat.Png, 100);
-                await using (var fs = outputInfo.Open(FileMode.Create, FileAccess.Write, FileShare.Read))
+                using (frameImage)
                 {
-                    pngData.SaveTo(fs);
+                    using var pngData = frameImage.Encode(SKEncodedImageFormat.Png, 100);
+                    await using (var fs = outputInfo.Open(FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        pngData.SaveTo(fs);
+                    }
                 }
 
                 _progress.LogInfo($"Danmaku frame at {timeSeconds:F1}s: {sprites.Count} comments on screen, {dropped} dropped (no free lane). Wrote {outputInfo.FullName}");
@@ -457,6 +527,7 @@ namespace TwitchDownloaderCore
             finally
             {
                 DisposeDanmakuTemplates();
+                DisposeGpuContext();
             }
         }
 
@@ -598,6 +669,7 @@ namespace TwitchDownloaderCore
 
                 using var frameBitmap = new SKBitmap(new SKImageInfo(canvasWidth, canvasHeight, SKColorType.Bgra8888, SKAlphaType.Premul));
                 using var frameCanvas = new SKCanvas(frameBitmap);
+                var gpu = GetGpuContext();
 
                 // Sliding active window: sprites are sorted by start time, so
                 // each frame only touches the sprites currently on screen
@@ -618,8 +690,30 @@ namespace TwitchDownloaderCore
                     }
                     active.RemoveAll(s => t >= s.ExitSeconds);
 
-                    DrawDanmakuFrame(frameCanvas, active, t, canvasWidth, lanePitch);
-                    frameCanvas.Flush();
+                    bool drawnByGpu = false;
+                    if (gpu is not null)
+                    {
+                        try
+                        {
+                            drawnByGpu = gpu.RenderFrame(canvasWidth, canvasHeight, canvas => DrawDanmakuFrame(canvas, active, t, canvasWidth, lanePitch), frameBitmap);
+                            if (!drawnByGpu)
+                            {
+                                throw new InvalidOperationException("GPU frame readback failed.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            DisableGpuContext(ex);
+                            gpu = null;
+                            drawnByGpu = false;
+                        }
+                    }
+
+                    if (!drawnByGpu)
+                    {
+                        DrawDanmakuFrame(frameCanvas, active, t, canvasWidth, lanePitch);
+                        frameCanvas.Flush();
+                    }
 
                     using var pixmap = frameBitmap.PeekPixels();
                     inputStream.Write(pixmap.GetPixelSpan());
@@ -649,6 +743,7 @@ namespace TwitchDownloaderCore
             {
                 renderOptions.BackgroundColor = savedBackground;
                 DisposeDanmakuTemplates();
+                DisposeGpuContext();
             }
         }
 
