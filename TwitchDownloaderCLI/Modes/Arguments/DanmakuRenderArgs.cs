@@ -111,6 +111,9 @@ namespace TwitchDownloaderCLI.Modes.Arguments
         [Option("highlight-scale", Default = 1.0, HelpText = "Scale factor for highlighted comments in danmaku mode (1 = normal size, clamped to 0.25-4).")]
         public double HighlightScale { get; set; }
 
+        [Option("gpu", Default = false, HelpText = "Render danmaku frames on the GPU (Skia GPU backend, experimental). Falls back to CPU rendering when no usable GPU/OpenGL stack is available.")]
+        public bool Gpu { get; set; }
+
         [Option("offline", Default = false, HelpText = "Render completely offline using only embedded emotes, badges, and bits from the input json.")]
         public bool Offline { get; set; }
 

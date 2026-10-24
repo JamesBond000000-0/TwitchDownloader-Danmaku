@@ -60,6 +60,7 @@ namespace TwitchDownloaderCLI.Modes
                 HighlightBadgeColors = ParseBadgeColors(inputOptions.HighlightBadgeColors),
                 DanmakuHighlightShowName = inputOptions.HighlightShowName,
                 DanmakuHighlightScale = inputOptions.HighlightScale,
+                DanmakuUseGpu = inputOptions.Gpu,
                 DanmakuShadow = inputOptions.Shadow,
                 DanmakuBandOpacity = inputOptions.BandOpacity,
                 Outline = inputOptions.Outline,

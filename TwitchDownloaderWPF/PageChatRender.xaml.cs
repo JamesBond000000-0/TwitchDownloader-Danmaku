@@ -154,6 +154,7 @@ namespace TwitchDownloaderWPF
                 HighlightBadgeColors = new Dictionary<string, SKColor>(_danmakuBadgeColors, StringComparer.OrdinalIgnoreCase),
                 DanmakuHighlightScale = double.Parse(textDanmakuHighlightScale.Text, CultureInfo.CurrentCulture),
                 DanmakuHighlightShowName = checkDanmakuHighlightShowName.IsChecked.GetValueOrDefault(),
+                DanmakuUseGpu = checkDanmakuGpu.IsChecked.GetValueOrDefault(),
                 HideUsername = checkDanmaku.IsChecked.GetValueOrDefault() && checkDanmakuHideName.IsChecked.GetValueOrDefault(),
             };
             if (_danmakuBadgeColors.Count > 0)

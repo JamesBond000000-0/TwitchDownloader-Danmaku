@@ -271,6 +271,7 @@
                             <CheckBox x:Name="checkDanmakuHideName" Content="Hide usernames" Margin="0,16,0,0" BorderBrush="{DynamicResource AppElementBorder}"/>
                             <CheckBox x:Name="checkDanmakuHighlightShowName" Content="Highlighted keep username" Margin="0,16,0,0" BorderBrush="{DynamicResource AppElementBorder}"/>
                             <Button x:Name="btnDanmakuBadgeColors" Content="Per-badge colors..." Margin="0,12,0,0" HorizontalAlignment="Left" Click="BtnDanmakuBadgeColors_Click" Background="{DynamicResource ActionButtonBackground}" Foreground="{DynamicResource ActionButtonText}" BorderBrush="{DynamicResource ActionButtonBorder}"/>
+                            <CheckBox x:Name="checkDanmakuGpu" Content="GPU rendering (experimental)" Margin="0,16,0,0" BorderBrush="{DynamicResource AppElementBorder}"/>
                         </StackPanel>
                     </DockPanel>
                     <TextBlock Text="Canvas size, font, background color, output format and codec are taken from the other tabs. Partial render (range selection) also applies to danmaku renders." Margin="5,2,5,0" Foreground="{DynamicResource AppInnerText}" TextWrapping="Wrap"/>
